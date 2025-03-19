@@ -31,7 +31,13 @@ except ImportError:
 def _mf_preproc(ds):
     ds["pfts1d_wtgcell"] = ds["pfts1d_wtgcell"].expand_dims(
         dim="time", axis=0
-    )  # .assign_coords({"time": ds["time"]})
+    )
+
+    # Some variables are only saved in the first file of a run segment. These cause problems for
+    # open_mfdataset(), and since we don't really care about them, just drop them.
+    vars_to_drop = [x for x in ds if any("lev" in d for d in ds[x].dims)]
+    ds = ds.drop_vars(vars_to_drop)
+
     return ds
 
 
