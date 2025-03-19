@@ -2,9 +2,17 @@
 Functions to generate useful crop variables not saved by CTSM
 """
 
+import os
+import sys
 import numpy as np
 
-from crops.crop_defaults import DEFAULT_VAR_DICT
+try:
+    # Attempt relative import if running as part of a package
+    from .crop_defaults import DEFAULT_VAR_DICT
+except ImportError:
+    # Fallback to absolute import if running as a script
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from crops.crop_defaults import DEFAULT_VAR_DICT
 
 
 def _handle_huifrac_where_gddharv_notpos(da_huifrac, da_gddharv):
