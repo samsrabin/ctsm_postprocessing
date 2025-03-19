@@ -2,11 +2,20 @@
 Functions to mark crop seasons as invalid
 """
 
+import os
+import sys
 import numpy as np
 import xarray as xr
 
-from crops.crop_defaults import DEFAULT_VAR_DICT
-from crops.crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
+try:
+    # Attempt relative import if running as part of a package
+    from .crop_defaults import DEFAULT_VAR_DICT
+    from .crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
+except ImportError:
+    # Fallback to absolute import if running as a script
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from crops.crop_defaults import DEFAULT_VAR_DICT
+    from crops.crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
 
 
 def _get_min_viable_hui(ds, min_viable_hui, huifrac_var, this_pft=None):
