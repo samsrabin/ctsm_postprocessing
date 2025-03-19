@@ -1,0 +1,7 @@
+.vscode
+__pycache__
+
+# Ignore netCDF files...
+*.nc
+# except the ones used for testing
+!test/testdata/*nc
