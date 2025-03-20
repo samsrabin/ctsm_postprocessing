@@ -62,7 +62,6 @@ class CropCase:
         start_year,
         end_year,
         verbose=False,
-        dev_mode=False,
         n_pfts=N_PFTS,
     ):
         # pylint: disable=too-many-positional-arguments
@@ -78,11 +77,9 @@ class CropCase:
             start_year (int): Start year for the crop data.
             end_year (int): End year for the crop data.
             verbose (bool): Whether to print verbose output.
-            dev_mode (bool): Whether to enable development mode.
             n_pfts (int): Number of PFTs.
         """
         self.verbose = verbose
-        self.dev_mode = dev_mode
         # Get list of all time series files
         file_pattern = os.path.join(file_dir, name + ".clm2" + clm_file_h + "*.nc")
         file_list = np.sort(glob.glob(file_pattern))
@@ -147,16 +144,6 @@ class CropCase:
                     join="override",
                     coords="minimal",
                 )
-
-        # Load
-        if self.dev_mode:
-            if self.verbose:
-                start = time()
-                print("Loading...")
-            self.cft_ds.load()
-            if self.verbose:
-                end = time()
-                print(f"Loading took {int(end - start)} s")
 
         # Get secondary variables
         if self.verbose:
