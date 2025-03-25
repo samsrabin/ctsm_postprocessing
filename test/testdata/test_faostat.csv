@@ -1,0 +1,161 @@
+Area,Year,Element,Item,Unit,Value
+USA,1986,Production,Maize,t,1.5
+USA,1986,Production,"Maize, green",t,2.5
+USA,1986,Production,Rice,t,3.5
+USA,1986,Production,"Seed cotton, unginned",t,4.5
+USA,1986,Area harvested,Maize,ha,5.5
+USA,1986,Area harvested,"Maize, green",ha,6.5
+USA,1986,Area harvested,Rice,ha,7.5
+USA,1986,Area harvested,"Seed cotton, unginned",ha,8.5
+USA,1987,Production,Maize,t,9.5
+USA,1987,Production,"Maize, green",t,10.5
+USA,1987,Production,Rice,t,11.5
+USA,1987,Production,"Seed cotton, unginned",t,12.5
+USA,1987,Area harvested,Maize,ha,13.5
+USA,1987,Area harvested,"Maize, green",ha,14.5
+USA,1987,Area harvested,Rice,ha,15.5
+USA,1987,Area harvested,"Seed cotton, unginned",ha,16.5
+USA,1988,Production,Maize,t,17.5
+USA,1988,Production,"Maize, green",t,18.5
+USA,1988,Production,Rice,t,19.5
+USA,1988,Production,"Seed cotton, unginned",t,20.5
+USA,1988,Area harvested,Maize,ha,21.5
+USA,1988,Area harvested,"Maize, green",ha,22.5
+USA,1988,Area harvested,Rice,ha,23.5
+USA,1988,Area harvested,"Seed cotton, unginned",ha,24.5
+USA,1989,Production,Maize,t,25.5
+USA,1989,Production,"Maize, green",t,26.5
+USA,1989,Production,Rice,t,27.5
+USA,1989,Production,"Seed cotton, unginned",t,28.5
+USA,1989,Area harvested,Maize,ha,29.5
+USA,1989,Area harvested,"Maize, green",ha,30.5
+USA,1989,Area harvested,Rice,ha,31.5
+USA,1989,Area harvested,"Seed cotton, unginned",ha,32.5
+Germany,1986,Production,Maize,t,33.5
+Germany,1986,Production,"Maize, green",t,34.5
+Germany,1986,Production,Rice,t,35.5
+Germany,1986,Production,"Seed cotton, unginned",t,36.5
+Germany,1986,Area harvested,Maize,ha,37.5
+Germany,1986,Area harvested,"Maize, green",ha,38.5
+Germany,1986,Area harvested,Rice,ha,39.5
+Germany,1986,Area harvested,"Seed cotton, unginned",ha,40.5
+Germany,1987,Production,Maize,t,41.5
+Germany,1987,Production,"Maize, green",t,42.5
+Germany,1987,Production,Rice,t,43.5
+Germany,1987,Production,"Seed cotton, unginned",t,44.5
+Germany,1987,Area harvested,Maize,ha,45.5
+Germany,1987,Area harvested,"Maize, green",ha,46.5
+Germany,1987,Area harvested,Rice,ha,47.5
+Germany,1987,Area harvested,"Seed cotton, unginned",ha,48.5
+Germany,1988,Production,Maize,t,49.5
+Germany,1988,Production,"Maize, green",t,50.5
+Germany,1988,Production,Rice,t,51.5
+Germany,1988,Production,"Seed cotton, unginned",t,52.5
+Germany,1988,Area harvested,Maize,ha,53.5
+Germany,1988,Area harvested,"Maize, green",ha,54.5
+Germany,1988,Area harvested,Rice,ha,55.5
+Germany,1988,Area harvested,"Seed cotton, unginned",ha,56.5
+Germany,1989,Production,Maize,t,57.5
+Germany,1989,Production,"Maize, green",t,58.5
+Germany,1989,Production,Rice,t,59.5
+Germany,1989,Production,"Seed cotton, unginned",t,60.5
+Germany,1989,Area harvested,Maize,ha,61.5
+Germany,1989,Area harvested,"Maize, green",ha,62.5
+Germany,1989,Area harvested,Rice,ha,63.5
+Germany,1989,Area harvested,"Seed cotton, unginned",ha,64.5
+China,1986,Production,Maize,t,65.5
+China,1986,Production,"Maize, green",t,66.5
+China,1986,Production,Rice,t,67.5
+China,1986,Production,"Seed cotton, unginned",t,68.5
+China,1986,Area harvested,Maize,ha,69.5
+China,1986,Area harvested,"Maize, green",ha,70.5
+China,1986,Area harvested,Rice,ha,71.5
+China,1986,Area harvested,"Seed cotton, unginned",ha,72.5
+China,1987,Production,Maize,t,73.5
+China,1987,Production,"Maize, green",t,74.5
+China,1987,Production,Rice,t,75.5
+China,1987,Production,"Seed cotton, unginned",t,76.5
+China,1987,Area harvested,Maize,ha,77.5
+China,1987,Area harvested,"Maize, green",ha,78.5
+China,1987,Area harvested,Rice,ha,79.5
+China,1987,Area harvested,"Seed cotton, unginned",ha,80.5
+China,1988,Production,Maize,t,81.5
+China,1988,Production,"Maize, green",t,82.5
+China,1988,Production,Rice,t,83.5
+China,1988,Production,"Seed cotton, unginned",t,84.5
+China,1988,Area harvested,Maize,ha,85.5
+China,1988,Area harvested,"Maize, green",ha,86.5
+China,1988,Area harvested,Rice,ha,87.5
+China,1988,Area harvested,"Seed cotton, unginned",ha,88.5
+China,1989,Production,Maize,t,89.5
+China,1989,Production,"Maize, green",t,90.5
+China,1989,Production,Rice,t,91.5
+China,1989,Production,"Seed cotton, unginned",t,92.5
+China,1989,Area harvested,Maize,ha,93.5
+China,1989,Area harvested,"Maize, green",ha,94.5
+China,1989,Area harvested,Rice,ha,95.5
+China,1989,Area harvested,"Seed cotton, unginned",ha,96.5
+"China, mainland",1986,Production,Maize,t,97.5
+"China, mainland",1986,Production,"Maize, green",t,98.5
+"China, mainland",1986,Production,Rice,t,99.5
+"China, mainland",1986,Production,"Seed cotton, unginned",t,100.5
+"China, mainland",1986,Area harvested,Maize,ha,101.5
+"China, mainland",1986,Area harvested,"Maize, green",ha,102.5
+"China, mainland",1986,Area harvested,Rice,ha,103.5
+"China, mainland",1986,Area harvested,"Seed cotton, unginned",ha,104.5
+"China, mainland",1987,Production,Maize,t,105.5
+"China, mainland",1987,Production,"Maize, green",t,106.5
+"China, mainland",1987,Production,Rice,t,107.5
+"China, mainland",1987,Production,"Seed cotton, unginned",t,108.5
+"China, mainland",1987,Area harvested,Maize,ha,109.5
+"China, mainland",1987,Area harvested,"Maize, green",ha,110.5
+"China, mainland",1987,Area harvested,Rice,ha,111.5
+"China, mainland",1987,Area harvested,"Seed cotton, unginned",ha,112.5
+"China, mainland",1988,Production,Maize,t,113.5
+"China, mainland",1988,Production,"Maize, green",t,114.5
+"China, mainland",1988,Production,Rice,t,115.5
+"China, mainland",1988,Production,"Seed cotton, unginned",t,116.5
+"China, mainland",1988,Area harvested,Maize,ha,117.5
+"China, mainland",1988,Area harvested,"Maize, green",ha,118.5
+"China, mainland",1988,Area harvested,Rice,ha,119.5
+"China, mainland",1988,Area harvested,"Seed cotton, unginned",ha,120.5
+"China, mainland",1989,Production,Maize,t,121.5
+"China, mainland",1989,Production,"Maize, green",t,122.5
+"China, mainland",1989,Production,Rice,t,123.5
+"China, mainland",1989,Production,"Seed cotton, unginned",t,124.5
+"China, mainland",1989,Area harvested,Maize,ha,125.5
+"China, mainland",1989,Area harvested,"Maize, green",ha,126.5
+"China, mainland",1989,Area harvested,Rice,ha,127.5
+"China, mainland",1989,Area harvested,"Seed cotton, unginned",ha,128.5
+"China, Hong Kong SAR",1986,Production,Maize,t,129.5
+"China, Hong Kong SAR",1986,Production,"Maize, green",t,130.5
+"China, Hong Kong SAR",1986,Production,Rice,t,131.5
+"China, Hong Kong SAR",1986,Production,"Seed cotton, unginned",t,132.5
+"China, Hong Kong SAR",1986,Area harvested,Maize,ha,133.5
+"China, Hong Kong SAR",1986,Area harvested,"Maize, green",ha,134.5
+"China, Hong Kong SAR",1986,Area harvested,Rice,ha,135.5
+"China, Hong Kong SAR",1986,Area harvested,"Seed cotton, unginned",ha,136.5
+"China, Hong Kong SAR",1987,Production,Maize,t,137.5
+"China, Hong Kong SAR",1987,Production,"Maize, green",t,138.5
+"China, Hong Kong SAR",1987,Production,Rice,t,139.5
+"China, Hong Kong SAR",1987,Production,"Seed cotton, unginned",t,140.5
+"China, Hong Kong SAR",1987,Area harvested,Maize,ha,141.5
+"China, Hong Kong SAR",1987,Area harvested,"Maize, green",ha,142.5
+"China, Hong Kong SAR",1987,Area harvested,Rice,ha,143.5
+"China, Hong Kong SAR",1987,Area harvested,"Seed cotton, unginned",ha,144.5
+"China, Hong Kong SAR",1988,Production,Maize,t,145.5
+"China, Hong Kong SAR",1988,Production,"Maize, green",t,146.5
+"China, Hong Kong SAR",1988,Production,Rice,t,147.5
+"China, Hong Kong SAR",1988,Production,"Seed cotton, unginned",t,148.5
+"China, Hong Kong SAR",1988,Area harvested,Maize,ha,149.5
+"China, Hong Kong SAR",1988,Area harvested,"Maize, green",ha,150.5
+"China, Hong Kong SAR",1988,Area harvested,Rice,ha,151.5
+"China, Hong Kong SAR",1988,Area harvested,"Seed cotton, unginned",ha,152.5
+"China, Hong Kong SAR",1989,Production,Maize,t,153.5
+"China, Hong Kong SAR",1989,Production,"Maize, green",t,154.5
+"China, Hong Kong SAR",1989,Production,Rice,t,155.5
+"China, Hong Kong SAR",1989,Production,"Seed cotton, unginned",t,156.5
+"China, Hong Kong SAR",1989,Area harvested,Maize,ha,157.5
+"China, Hong Kong SAR",1989,Area harvested,"Maize, green",ha,158.5
+"China, Hong Kong SAR",1989,Area harvested,Rice,ha,159.5
+"China, Hong Kong SAR",1989,Area harvested,"Seed cotton, unginned",ha,160.5
