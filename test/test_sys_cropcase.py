@@ -45,19 +45,18 @@ crops_to_include = [
 START_YEAR = 2023
 END_YEAR = 2024
 
+
 class TestSysCropCase(unittest.TestCase):
     """
     Class for testing CropCase
     """
+
     def test_setup_cropcase(self):
         """
         Make sure that CropCase does not error when importing test data
         """
         name = "ctsm53019_f09_BNF_hist"
-        file_dir = os.path.join(
-            os.path.dirname(__file__),
-            "testdata"
-        )
+        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
         this_case = CropCase(
             name=name,
             file_dir=file_dir,
@@ -69,5 +68,5 @@ class TestSysCropCase(unittest.TestCase):
         )
         self.assertListEqual(
             [x.name for x in this_case.crop_list],
-            ['corn', 'cotton', 'rice', 'soybean', 'sugarcane', 'wheat'],
+            ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
         )

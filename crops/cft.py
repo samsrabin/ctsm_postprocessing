@@ -8,6 +8,7 @@ the CFT within a dataset.
 
 import numpy as np
 
+
 class Cft:
     """
     Represents a single crop functional type (CFT) in the Community Terrestrial Systems Model (CTSM)
@@ -62,9 +63,7 @@ class Cft:
         Get the indices on the pft dimension corresponding to this CFT
         """
         if self.pft_num is None:
-            raise RuntimeError(
-                "get_where() can't be run until after calling Crop.update_pft()"
-            )
+            raise RuntimeError("get_where() can't be run until after calling Crop.update_pft()")
         pfts1d_itype_veg = ds["pfts1d_itype_veg"]
         if "time" in pfts1d_itype_veg.dims:
             pfts1d_itype_veg = pfts1d_itype_veg.isel(time=0)

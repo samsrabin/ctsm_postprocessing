@@ -5,6 +5,7 @@ Module for handling lists of Crop Functional Types (CFTs) in the Community Terre
 This module defines the CftList class, which represents a list of CFTs, and provides methods for
 accessing and managing CFTs.
 """
+
 import os
 import sys
 import numpy as np
@@ -16,6 +17,7 @@ except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cft import Cft
+
 
 class CftList:
     """
@@ -47,9 +49,8 @@ class CftList:
         cfts_in_file = [x.name for x in self.cft_list]
         missing_cfts = [x for x in cfts_to_include if x not in cfts_in_file]
         if missing_cfts:
-            msg = (
-                "The following are in cfts_to_include but not the dataset: "
-                + ", ".join(missing_cfts)
+            msg = "The following are in cfts_to_include but not the dataset: " + ", ".join(
+                missing_cfts
             )
             raise KeyError(msg)
 

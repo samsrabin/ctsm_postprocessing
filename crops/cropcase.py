@@ -4,6 +4,7 @@ Module for handling crop cases in the Community Terrestrial Systems Model (CTSM)
 This module defines classes and functions for managing crop cases, including initializing crop
 cases, updating crop data, and retrieving crop-specific information.
 """
+
 import os
 import sys
 import glob
@@ -29,9 +30,7 @@ except ImportError:
 
 
 def _mf_preproc(ds):
-    ds["pfts1d_wtgcell"] = ds["pfts1d_wtgcell"].expand_dims(
-        dim="time", axis=0
-    )
+    ds["pfts1d_wtgcell"] = ds["pfts1d_wtgcell"].expand_dims(dim="time", axis=0)
 
     # Some variables are only saved in the first file of a run segment. These cause problems for
     # open_mfdataset(), and since we don't really care about them, just drop them.
@@ -90,15 +89,10 @@ class CropCase:
         self.file_list = []
         for filename in file_list:
             ds = xr.open_dataset(filename)
-            if (
-                ds.time.values[0].year <= end_year
-                and start_year <= ds.time.values[-1].year
-            ):
+            if ds.time.values[0].year <= end_year and start_year <= ds.time.values[-1].year:
                 self.file_list.append(filename)
         if not self.file_list:
-            raise FileNotFoundError(
-                f"No files found with timestamps in {start_year}-{end_year}"
-            )
+            raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
 
         # Read files
         # Adding join="override", compat="override", coords="minimal", doesn't fix the graph size
