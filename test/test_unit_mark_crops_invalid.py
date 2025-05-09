@@ -452,9 +452,9 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         self.assertNotIn("min_viable_hui", da_out.attrs)
         self.assertTrue(da_out.attrs["mxmat_limited"])
 
-    def test_mark_crops_invalid_just_seasonlength_corn(self):
+    def setup_time_grid_ds(self):
         """
-        Test mark_crops_invalid() when not setting minimum viable HUI, corn only
+        Set up a fake Dataset with dimensions time x grid
         """
         n_grid = 4
         n_time = 2
@@ -474,6 +474,14 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
                 self.huifrac_var: huifrac_in_da,
             }
         )
+
+        return ds
+
+    def test_mark_crops_invalid_just_seasonlength_corn(self):
+        """
+        Test mark_crops_invalid() when not setting minimum viable HUI, corn only
+        """
+        ds = self.setup_time_grid_ds()
 
         da_in = xr.DataArray(
             data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
@@ -550,24 +558,7 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         Test mark_crops_invalid() when not setting max season length and saying
         min_viable_hui="isimip3", corn only
         """
-        n_grid = 4
-        n_time = 2
-        huifrac_in = np.array([[0.1, 0.9, 0.2, 0.8], [0.3, 0.7, 0.4, 0.6]])
-        huifrac_coords = {
-            "time": np.arange(n_time),
-            "grid": np.arange(n_grid),
-        }
-        huifrac_in_da = xr.DataArray(
-            data=huifrac_in,
-            dims=["time", "grid"],
-            coords=huifrac_coords,
-            attrs={"test_attribute": 15},
-        )
-        ds = xr.Dataset(
-            data_vars={
-                self.huifrac_var: huifrac_in_da,
-            }
-        )
+        ds = self.setup_time_grid_ds()
 
         da_in = xr.DataArray(
             data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
