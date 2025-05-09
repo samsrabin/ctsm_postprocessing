@@ -503,7 +503,15 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
             ds, "test_var", min_viable_hui=None, mxmats=mxmats, this_pft="corn"
         )
         target = np.array([[1, 2, 3, 0], [0, 0, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertNotIn("min_viable_hui", da_out.attrs)
+        self.assertTrue(da_out.attrs["mxmat_limited"])
 
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(
+            ds, min_viable_hui=None, mxmats=mxmats, this_pft="corn"
+        )
+        target = np.array([[1, 1, 1, 0], [0, 0, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertNotIn("min_viable_hui", da_out.attrs)
         self.assertTrue(da_out.attrs["mxmat_limited"])
@@ -526,6 +534,13 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
 
         da_out = mci.mark_crops_invalid(ds, "test_var", min_viable_hui=min_viable_hui, mxmats=None)
         target = np.array([[0, 2, 0, 4], [0, 6, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
+        self.assertNotIn("mxmat_limited", da_out.attrs)
+
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(ds, min_viable_hui=min_viable_hui, mxmats=None)
+        target = np.array([[0, 1, 0, 1], [0, 1, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
         self.assertNotIn("mxmat_limited", da_out.attrs)
@@ -607,7 +622,15 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
             ds, "test_var", min_viable_hui=min_viable_hui, mxmats=mxmats
         )
         target = np.array([[0, 2, 0, 0], [0, 6, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
+        self.assertTrue(da_out.attrs["mxmat_limited"])
 
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(
+            ds, min_viable_hui=min_viable_hui, mxmats=mxmats
+        )
+        target = np.array([[0, 1, 0, 0], [0, 1, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
         self.assertTrue(da_out.attrs["mxmat_limited"])

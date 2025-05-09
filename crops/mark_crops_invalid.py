@@ -169,9 +169,23 @@ def mark_invalid_season_too_long(ds, da_in, mxmats, gslen_var, invalid_value=0, 
     return da_out
 
 
+def _get_ones_da(template_da):
+    """
+    Produce a DataArray that's like a template DataArray but with all ones
+    """
+    tmp = np.ones_like(template_da.values)
+    da_out = xr.DataArray(
+        data=tmp,
+        dims=template_da.dims,
+        coords=template_da.coords,
+    )
+    return da_out
+
+
+
 def mark_crops_invalid(
     ds,
-    in_var,
+    in_var=None,
     min_viable_hui=None,
     mxmats=None,
     var_dict=DEFAULT_VAR_DICT,
@@ -184,7 +198,8 @@ def mark_crops_invalid(
 
     Parameters:
     ds (xarray.Dataset): Input dataset.
-    in_var (str): Name of variable to process for invalidity.
+    in_var (str): Name of variable to process for invalidity. If None, will make an array with 1
+                  for valid harvests and 0 elsewhere.
     min_viable_hui (float or str): Minimum viable HUI value or a string identifier.
     mxmats (dict): Dictionary of maximum allowed season length. Format: {"crop": value}.
     var_dict (dict): Dictionary of variable names.
@@ -194,10 +209,15 @@ def mark_crops_invalid(
     """
     mxmat_limited = bool(mxmats)
 
+    if in_var is None:
+        da_out = None
+    else:
     da_out = ds[in_var].copy()
 
     # Mark as invalid where minimum viable HUI wasn't reached
     if min_viable_hui is not None:
+        if da_out is None:
+            da_out = _get_ones_da(ds[var_dict["huifrac_var"]])
         huifrac = _handle_huifrac_where_gddharv_notpos(
             ds[var_dict["huifrac_var"]], ds[var_dict["gddharv_var"]]
         )
@@ -213,6 +233,8 @@ def mark_crops_invalid(
     # Get variants with values set marked as invalid if season was longer than CLM PFT parameter
     # mxmat
     if mxmat_limited:
+        if da_out is None:
+            da_out = _get_ones_da(ds[var_dict["gslen_var"]])
         da_out = mark_invalid_season_too_long(
             ds,
             da_out,
