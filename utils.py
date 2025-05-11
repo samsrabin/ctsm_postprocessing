@@ -16,9 +16,6 @@ import cftime
 import numpy as np
 import xarray as xr
 
-from . import fates_xarray_funcs as fates
-
-# from xr_ds_ex import xr_ds_ex
 
 
 # generate annual means, weighted by days / month
