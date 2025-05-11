@@ -1355,6 +1355,13 @@ def food_grainc_to_harvested_tons_onecrop(data_in, this_crop):
         "wheat": 0.88,
     }
 
+    # Sanitize this_crop to match crop types in drymatter_fractions
+    this_crop = this_crop.replace("temperate_", "")
+    this_crop = this_crop.replace("tropical_", "")
+    this_crop = this_crop.replace("irrigated_", "")
+    this_crop = this_crop.replace("spring_", "")
+    this_crop = this_crop.replace("winter_", "")
+
     data_out = data_in / drymatter_fractions[this_crop]
 
     # For sugarcane, also account for the fact that soluble solids are only 51% of dry matter.

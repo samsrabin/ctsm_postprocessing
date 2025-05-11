@@ -70,3 +70,6 @@ class TestSysCropCase(unittest.TestCase):
             [x.name for x in this_case.crop_list],
             ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
         )
+        self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
+        self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
+        self.assertTrue("YIELD_ANN" in this_case.cft_ds)

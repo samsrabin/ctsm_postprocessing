@@ -8,6 +8,7 @@ cases, updating crop data, and retrieving crop-specific information.
 import os
 import sys
 import glob
+import re
 from time import time
 import xarray as xr
 import numpy as np
@@ -16,9 +17,11 @@ try:
     # Attempt relative import if running as part of a package
     from .cftlist import CftList
     from .croplist import CropList
+    from .mark_crops_invalid import mark_crops_invalid
     from . import crop_secondary_variables as c2o
     from . import crop_utils as cu
     from .crop_defaults import N_PFTS
+    from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -28,6 +31,7 @@ except ImportError:
     import crops.crop_secondary_variables as c2o
     import crops.crop_utils as cu
     from crops.crop_defaults import N_PFTS
+    from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
 
 def _mf_preproc(ds):
@@ -151,3 +155,53 @@ class CropCase:
         if self.verbose:
             end = time()
             print(f"Secondary variables took {int(end - start)} s")
+
+        # Get yield, marking non-viable harvests as zero and converting to wet matter
+        self.get_yield()
+
+    def get_yield(self):
+        """
+        Get yield, marking non-viable harvests as zero and converting to wet matter
+        """
+        if not any("_TO_FOOD_PERHARV" in v for v in self.cft_ds):
+            print("WARNING: Will not calculate yield because crop maturity can't be assessed")
+            return
+
+        # Create DataArray with zeroes where harvest is invalid and ones elsewhere
+        is_valid_harvest = mark_crops_invalid(self.cft_ds, min_viable_hui="isimip3")
+
+        # Mark invalid harvests as zero
+        for v in self.cft_ds:
+            if not re.match(r"GRAIN[CN]_TO_FOOD_PERHARV", v):
+                continue
+
+            # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
+            new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
+            da_new = self.cft_ds[v] * is_valid_harvest
+            self.cft_ds[new_var] = da_new
+            self.cft_ds[new_var].attrs["long_name"] = "grain C to food in VIABLE harvested organ per harvest"
+
+            # Get annual values
+            new_var_ann = new_var.replace("PERHARV", "ANN")
+            self.cft_ds[new_var_ann] = self.cft_ds[new_var].sum(dim="mxharvests")
+            self.cft_ds[new_var].attrs["long_name"] = "grain C to food in VIABLE harvested organ per calendar year"
+
+        # Calculate actual yield (wet matter)
+        c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
+        if c_var in self.cft_ds:
+            wm_arr = np.full_like(self.cft_ds[c_var].values, np.nan)
+            for i, pft_int in enumerate(self.cft_ds["cft"].values):
+                pft_str = ivt_int2str(pft_int)
+                if self.cft_ds[c_var].dims[0] != "cft":
+                    raise NotImplementedError("Below code assumes cft is the 0th dimension")
+                wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
+            self.cft_ds["YIELD_PERHARV"] = xr.DataArray(
+                data=wm_arr,
+                coords=self.cft_ds[c_var].coords,
+                dims=self.cft_ds[c_var].dims,
+                attrs={
+                    "long_name": "viable wet matter yield (minus losses) per harvest",
+                    "units": "g wet matter / m^2"
+                },
+            )
+            self.cft_ds["YIELD_ANN"] = self.cft_ds["YIELD_PERHARV"].sum(dim="mxharvests")
