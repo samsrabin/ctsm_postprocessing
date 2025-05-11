@@ -11,12 +11,17 @@ try:
     # Attempt relative import if running as part of a package
     from .crop_defaults import DEFAULT_VAR_DICT
     from .crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
+    from ..utils import ivt_int2str
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.crop_defaults import DEFAULT_VAR_DICT
     from crops.crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
+    from utils import ivt_int2str
 
+# Minimum viable HUI under ISIMIP3-Agriculture protocol
+MIN_HUIFRAC_CORN_ISIMIP3 = 0.8  # Lower than other crops to account for silage maize harvest
+MIN_HUIFRAC_OTHER_ISIMIP3 = 0.9
 
 def _get_min_viable_hui(ds, min_viable_hui, huifrac_var, this_pft=None):
     """
@@ -65,21 +70,34 @@ def _get_itype_veg_str_varname(pftpatch_dimname):
 
 
 def _get_isimip3_min_hui(ds, huifrac_var, this_pft=None):
-    corn_value = 0.8  # Lower than other crops to account for silage maize harvest
-    other_value = 0.9
 
     # Check type of this_pft
     if this_pft is not None and not isinstance(this_pft, str):
         raise TypeError(f"If specified, this_pft must be str, not {type(this_pft)}")
 
-    # Fill with other_value; will be replaced with corn_value if needed
-    min_viable_hui_touse = np.full_like(ds[huifrac_var].values, fill_value=other_value)
+    # Fill with non-corn value; will be replaced with corn value if needed
+    min_viable_hui_touse = np.full_like(ds[huifrac_var].values, fill_value=MIN_HUIFRAC_OTHER_ISIMIP3)
 
     # Handle the simple case where we've given one specific PFT
     if this_pft is not None:
         if "corn" in this_pft:
-            min_viable_hui_touse[:] = corn_value
+            min_viable_hui_touse[:] = MIN_HUIFRAC_CORN_ISIMIP3
         return min_viable_hui_touse
+
+    # Otherwise, handling depends on what kind of Dataset we're dealing with
+    if "cft" in ds.coords:
+        _get_isimip3_min_hui_corn = _get_isimip3_min_hui_corn_cftds
+    else:
+        _get_isimip3_min_hui_corn = _get_isimip3_min_hui_corn_regds
+    min_viable_hui_touse = _get_isimip3_min_hui_corn(ds, huifrac_var, min_viable_hui_touse)
+
+    return min_viable_hui_touse
+
+
+def _get_isimip3_min_hui_corn_regds(ds, huifrac_var, min_viable_hui_touse):
+    """
+    Fill corn PFTs in DataArray of minimum HUI for a regular (i.e., non-CFT-ized) Dataset
+    """
 
     pftpatch_dimname = _pft_or_patch(ds)
     itype_veg_str_varname = _get_itype_veg_str_varname(pftpatch_dimname)
@@ -92,9 +110,9 @@ def _get_isimip3_min_hui(ds, huifrac_var, this_pft=None):
         is_thistype = np.where((ds[itype_veg_str_varname].values == veg_str))[0]
         pftpatch_index = list(ds[huifrac_var].dims).index(pftpatch_dimname)
         if pftpatch_index == 0:
-            min_viable_hui_touse[is_thistype, ...] = corn_value
+            min_viable_hui_touse[is_thistype, ...] = MIN_HUIFRAC_CORN_ISIMIP3
         elif pftpatch_index == ds[huifrac_var].ndim - 1:
-            min_viable_hui_touse[..., is_thistype] = corn_value
+            min_viable_hui_touse[..., is_thistype] = MIN_HUIFRAC_CORN_ISIMIP3
         else:
             # Need patch to be either first or last dimension to allow use of ellipses
             raise NotImplementedError(
@@ -103,6 +121,35 @@ def _get_isimip3_min_hui(ds, huifrac_var, this_pft=None):
                 f" first (0) or last ({ds[huifrac_var].ndim - 1}), instead of"
                 f" {pftpatch_index}."
             )
+    return min_viable_hui_touse
+
+
+def _get_isimip3_min_hui_corn_cftds(ds, huifrac_var, min_viable_hui_touse):
+    """
+    Fill corn PFTs in DataArray of minimum HUI for a CFT-ized Dataset
+    """
+
+    # Where on the CFT dimension is it corn?
+    pft_list = [ivt_int2str(pft_int) for pft_int in ds["cft"].values]
+    corn_inds = [i for i, pft_name in enumerate(pft_list) if "corn" in pft_name]
+
+    # Where is the CFT dimension in the dimension list?
+    cft_index = list(ds[huifrac_var].dims).index("cft")
+
+    # Assign corn value to corn points, depending on where CFT dim is in dim list.
+    if cft_index == 0:
+        min_viable_hui_touse[corn_inds, ...] = MIN_HUIFRAC_CORN_ISIMIP3
+    elif cft_index == ds[huifrac_var].ndim - 1:
+        min_viable_hui_touse[..., corn_inds] = MIN_HUIFRAC_CORN_ISIMIP3
+    else:
+        # Need patch to be either first or last dimension to allow use of ellipses
+        raise NotImplementedError(
+            "Temporarily rearrange min_viable_hui_touse so that"
+            f" cft dimension is"
+            f" first (0) or last ({ds[huifrac_var].ndim - 1}), instead of"
+            f" {cft_index}."
+        )
+
     return min_viable_hui_touse
 
 
@@ -212,7 +259,7 @@ def mark_crops_invalid(
     if in_var is None:
         da_out = None
     else:
-    da_out = ds[in_var].copy()
+        da_out = ds[in_var].copy()
 
     # Mark as invalid where minimum viable HUI wasn't reached
     if min_viable_hui is not None:

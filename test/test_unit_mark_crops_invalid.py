@@ -179,6 +179,42 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         result = mci._get_isimip3_min_hui(ds, self.huifrac_var)
         self.assertTrue(np.array_equal(result, target))
 
+    def test_get_isimip3_min_hui_cftlast(self):
+        """
+        Test that _get_isimip3_min_hui() works as expected when cft is on last dimension
+        (i.e., CFT-ized dataset)
+        """
+        n_cft = 4
+        n_time = 2
+        shape = (n_time, n_cft)
+        huifrac_in = np.array([[0.1, 0.9, 0.2, 0.8], [0.3, 0.7, 0.4, 0.6]])
+        huifrac_coords = {
+            "time": np.arange(n_time),
+            "cft": [17, 19, 20, 21],  # For test, only the first one should be a corn PFT
+        }
+        huifrac_in_da = xr.DataArray(
+            data=huifrac_in,
+            dims=["time", "cft"],
+            coords=huifrac_coords,
+            attrs={"test_attribute": 15},
+        )
+        ds = xr.Dataset(
+            data_vars={
+                self.huifrac_var: huifrac_in_da,
+            }
+        )
+
+        # Check that you've set things up right
+        self.assertTupleEqual(huifrac_in.shape, shape)
+        self.assertTrue("cft" in ds.dims)
+        self.assertTrue("time" in ds.dims)
+
+        # Expect 0.8 where corn, 0.9 elsewhere
+        target = np.array([[0.8, 0.9, 0.9, 0.9], [0.8, 0.9, 0.9, 0.9]])
+
+        result = mci._get_isimip3_min_hui(ds, self.huifrac_var)
+        self.assertTrue(np.array_equal(result, target))
+
     def test_get_isimip3_min_hui_soy(self):
         """
         Test that _get_isimip3_min_hui() works as expected when this_pft is soy. Because we want
