@@ -23,9 +23,10 @@ except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cftlist import CftList
-    from crops.croplist import CftList
-    import ctsm_py.crops.crop_secondary_variables as c2o
-    import ctsm_py.crops.crop_utils as cu
+    from crops.croplist import CropList
+    from crops.mark_crops_invalid import mark_crops_invalid
+    import crops.crop_secondary_variables as c2o
+    import crops.crop_utils as cu
     from crops.crop_defaults import N_PFTS
 
 
