@@ -193,7 +193,8 @@ class CropCase:
             for i, pft_int in enumerate(self.cft_ds["cft"].values):
                 pft_str = ivt_int2str(pft_int)
                 if self.cft_ds[c_var].dims[0] != "cft":
-                    raise NotImplementedError("Below code assumes cft is the 0th dimension")
+                    raise NotImplementedError("Below code (wm_arr[i]) assumes cft is the 0th dimension")
+                wm_arr[i] = self.cft_ds[c_var].sel(cft=pft_int)
                 wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
             self.cft_ds["YIELD_PERHARV"] = xr.DataArray(
                 data=wm_arr,

@@ -77,6 +77,11 @@ class TestSysCropCase(unittest.TestCase):
         self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
         self.assertTrue("YIELD_ANN" in this_case.cft_ds)
 
+        # Ensure that not all yield values are zero
+        self.assertTrue(np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0))
+        self.assertTrue(np.any(this_case.cft_ds["YIELD_PERHARV"] > 0))
+        self.assertTrue(np.any(this_case.cft_ds["YIELD_ANN"] > 0))
+
         # Ensure that NaN values are handled correctly.
         # First, ensure that there are actually some NaN values that will be tested.
         self.assertTrue(np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"])))
