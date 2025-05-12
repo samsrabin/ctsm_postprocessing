@@ -8,10 +8,14 @@ import importlib
 
 with warnings.catch_warnings():
     warnings.filterwarnings(action="ignore", category=DeprecationWarning)
-    if importlib.find_loader("cf_units") is not None:
-        import cf_units as cf
-    if importlib.find_loader("cartopy") is not None:
-        from cartopy.util import add_cyclic_point
+    try:
+        import cf_units as cf  # pylint: disable=import-error
+    except:  # pylint: disable=bare-except
+        pass
+    try:
+        from cartopy.util import add_cyclic_point  # pylint: disable=import-error
+    except:  # pylint: disable=bare-except
+        pass
 import cftime
 import numpy as np
 import xarray as xr
