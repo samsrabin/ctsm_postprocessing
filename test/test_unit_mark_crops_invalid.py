@@ -8,15 +8,10 @@ import unittest
 import numpy as np
 import xarray as xr
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crops import mark_crops_invalid as mci
-except ImportError:
-    # Fallback to absolute import if running as a script
-    x = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    print(x)
-    sys.path.append(x)
-    from crops import mark_crops_invalid as mci
+# pylint: disable=wrong-import-position
+x = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(x)
+from crops import mark_crops_invalid as mci
 
 # pylint: disable=protected-access
 # pylint: disable=too-many-public-methods
