@@ -1152,7 +1152,7 @@ def grid_one_variable(this_ds, thisVar, fillValue=None, **kwargs):
     if fillValue:
         thisvar_gridded[:] = fillValue
     else:
-        thisvar_gridded[:] = np.NaN
+        thisvar_gridded[:] = np.nan
 
     # Fill with this variable
     fill_indices = []
