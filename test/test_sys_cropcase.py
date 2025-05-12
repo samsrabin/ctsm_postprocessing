@@ -5,6 +5,7 @@ Module to unit-test cropcase.py
 import sys
 import os
 import unittest
+import numpy as np
 
 try:
     # Attempt relative import if running as part of a package
@@ -70,6 +71,16 @@ class TestSysCropCase(unittest.TestCase):
             [x.name for x in this_case.crop_list],
             ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
         )
+
+        # Ensure that derived variables are present.
         self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
         self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
         self.assertTrue("YIELD_ANN" in this_case.cft_ds)
+
+        # Ensure that NaN values are handled correctly.
+        # First, ensure that there are actually some NaN values that will be tested.
+        self.assertTrue(np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"])))
+        self.assertTrue(np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"])))
+        # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
+        # doesn't have any NaN values.
+        self.assertFalse(np.any(np.isnan(this_case.cft_ds["YIELD_ANN"])))
