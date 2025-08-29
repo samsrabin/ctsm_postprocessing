@@ -84,6 +84,7 @@ class CropCase:
             n_pfts (int): Number of PFTs.
         """
         self.verbose = verbose
+        self.name = name
         # Get list of all time series files
         file_pattern = os.path.join(file_dir, name + ".clm2" + clm_file_h + "*.nc")
         file_list = np.sort(glob.glob(file_pattern))
