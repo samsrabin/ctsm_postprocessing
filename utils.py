@@ -21,7 +21,6 @@ import numpy as np
 import xarray as xr
 
 
-
 # generate annual means, weighted by days / month
 def weighted_annual_mean(array, time_in="time", time_out="time"):
     if isinstance(array[time_in].values[0], cftime.datetime):
@@ -1193,6 +1192,50 @@ def grid_one_variable(this_ds, thisVar, fillValue=None, **kwargs):
         thisvar_gridded.attrs["_FillValue"] = fillValue
 
     return thisvar_gridded
+
+
+def ungrid(
+    gridded_data: xr.Dataset | xr.DataArray,
+    ungridded_ds: xr.Dataset,
+    lat_name: str = "grid1d_lat",
+    lon_name: str = "grid1d_lon",
+):
+    """
+    Convert a gridded DataArray or Dataset with lat/lon dimensions into ungridded 1-D DataArray(s)
+    aligned with ungridded_ds[lat_name] and ungridded_ds[lon_name].
+
+    Parameters
+    ----------
+    gridded_data : xr.DataArray or xr.Dataset
+        Must have dimensions ("lat", "lon").
+    ungridded_ds : xr.Dataset
+        Must have variables for target point coordinates.
+    lat_name : str, optional (default="grid1d_lat")
+        Name of the 1-d latitude variable in ungridded_ds.
+    lon_name : str, optional (default="grid1d_lon")
+        Name of the 1-d longitude variable in ungridded_ds.
+
+    Returns
+    -------
+    xr.DataArray or xr.Dataset
+        Same type as input (DataArray/Dataset), but with dimension ("points",)
+        matching the order of ungridded_ds[lat_name], ungridded_ds[lon_name].
+    """
+    # Get lat/lon vectors
+    lat1d = ungridded_ds[lat_name]
+    lon1d = ungridded_ds[lon_name]
+
+    # Use xarray's vectorized indexing to pull values in correct order
+    ungridded = gridded_data.sel(lat=lat1d, lon=lon1d)
+
+    # Drop lat/lon dims, replace with a single point dimension
+    ungridded = ungridded.rename({"lat": "point"}).drop_vars("lon", errors="ignore")
+
+    # Drop now-unused arbitrary "point" dimension, leaving us with whatever the dimension of the
+    # original lat/lon vectors was
+    ungridded = ungridded.reset_coords(drop=True)
+
+    return ungridded
 
 
 # Xarray's native resampler is nice, but it will result in ALL variables being resampled
