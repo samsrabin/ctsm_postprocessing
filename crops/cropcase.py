@@ -35,7 +35,12 @@ except ImportError:
 
 
 def _mf_preproc(ds):
-    ds["pfts1d_wtgcell"] = ds["pfts1d_wtgcell"].expand_dims(dim="time", axis=0)
+    # If we care about pfts1d_wtgcell (the fraction of the grid cell taken up by each PFT during the
+    # model run; i.e., after applying mergetoclmpft), this is necessary for outputs before
+    # ctsm5.3.064. Otherwise, xarray will not recognize that it can vary over time, and we'll just
+    # get the first timestep's values.
+    if "time" not in ds["pfts1d_wtgcell"].dims:
+        ds["pfts1d_wtgcell"] = ds["pfts1d_wtgcell"].expand_dims(dim="time", axis=0)
 
     # Some variables are only saved in the first file of a run segment. These cause problems for
     # open_mfdataset(), and since we don't really care about them, just drop them.
