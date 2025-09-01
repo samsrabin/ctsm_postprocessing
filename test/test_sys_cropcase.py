@@ -61,7 +61,6 @@ class TestSysCropCase(unittest.TestCase):
         this_case = CropCase(
             name=name,
             file_dir=file_dir,
-            clm_file_h=".h5",
             start_year=START_YEAR,
             end_year=END_YEAR,
             cfts_to_include=cfts_to_include,

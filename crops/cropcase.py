@@ -45,6 +45,40 @@ def _mf_preproc(ds):
     return ds
 
 
+def _get_crop_tape(file_dir, name):
+    """
+    Get the tape (h0i, h2a, etc.) associated with crop outputs
+    """
+
+    # The variable we will use to determine which tape has the outputs we need
+    test_var = "HDATES"
+
+    # Get the list of tape IDs
+    results = os.listdir(file_dir)
+    results.sort()
+    results = [x for x in results if name in x]
+    h_tapes = set(x.split(".")[-3] for x in results)
+    for h_tape in h_tapes:
+        if not h_tape.startswith("h"):
+            raise RuntimeError(f"Failed to parse list of tapes (?); got: {h_tapes}")
+
+    # Figure out which tape has the variable we're checking for
+    this_h_tape = None
+    for h_tape in h_tapes:
+        pattern = os.path.join(file_dir, f"*clm2.{h_tape}.*.nc")
+        file_list = glob.glob(pattern)
+        if not file_list:
+            print(f"_get_crop_tape(): No {h_tape} files found")
+            continue
+        ds = xr.open_dataset(file_list[0])
+        if test_var in ds:
+            this_h_tape = h_tape
+            break
+    if this_h_tape is None:
+        raise KeyError(f"No history tape in {h_tapes} had {test_var}")
+    return this_h_tape
+
+
 class CropCase:
     # pylint: disable=too-few-public-methods
     """
@@ -60,7 +94,6 @@ class CropCase:
         self,
         name,
         file_dir,
-        clm_file_h,
         cfts_to_include,
         crops_to_include,
         start_year,
@@ -75,7 +108,6 @@ class CropCase:
         Parameters:
             name (str): Name of the crop case.
             file_dir (str): Directory containing the crop data files.
-            clm_file_h (str): File header for the crop data files.
             cfts_to_include (list): List of CFTs to include in the crop case.
             crops_to_include (list): List of crops to include in the crop case.
             start_year (int): Start year for the crop data.
@@ -85,8 +117,10 @@ class CropCase:
         """
         self.verbose = verbose
         self.name = name
-        # Get list of all time series files
-        file_pattern = os.path.join(file_dir, name + ".clm2" + clm_file_h + "*.nc")
+        # Get the tape we need to import (h0i, h2a, etc.)
+        this_h_tape = _get_crop_tape(file_dir, name)
+        # Get list of all files
+        file_pattern = os.path.join(file_dir, name + ".clm2." + this_h_tape + ".*.nc")
         file_list = np.sort(glob.glob(file_pattern))
         if len(file_list) == 0:
             raise FileNotFoundError("No files found matching pattern: " + file_pattern)
