@@ -209,6 +209,7 @@ class CropCase:
 
         # Create DataArray with zeroes where harvest is invalid and ones elsewhere
         is_valid_harvest = mark_crops_invalid(self.cft_ds, min_viable_hui="isimip3")
+        self.cft_ds["VALID_HARVEST"] = is_valid_harvest
 
         # Mark invalid harvests as zero
         for v in self.cft_ds:
