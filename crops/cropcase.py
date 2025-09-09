@@ -56,7 +56,7 @@ def _get_crop_tape(file_dir, name):
     """
 
     # The variable we will use to determine which tape has the outputs we need
-    test_var = "HDATES"
+    test_var = "GRAINC_TO_FOOD_PERHARV"
 
     # Get the list of tape IDs
     results = os.listdir(file_dir)
@@ -189,9 +189,16 @@ class CropCase:
             start = time()
             print("Getting secondary variables")
         for var in ["HDATES", "SDATES_PERHARV"]:
+            if var not in self.cft_ds:
+                print(f"{var} not found in Dataset")
+                continue
             self.cft_ds[var] = self.cft_ds[var].where(self.cft_ds[var] >= 0)
         self.cft_ds["HUIFRAC_PERHARV"] = c2o.get_huifrac(self.cft_ds)
-        self.cft_ds["GSLEN_PERHARV"] = c2o.get_gslen(self.cft_ds)
+        gslen_perharv = c2o.get_gslen(self.cft_ds)
+        if gslen_perharv is None:
+            print("Could not calculate GSLEN_PERHARV")
+        else:
+            self.cft_ds["GSLEN_PERHARV"] = gslen_perharv
         if self.verbose:
             end = time()
             print(f"Secondary variables took {int(end - start)} s")

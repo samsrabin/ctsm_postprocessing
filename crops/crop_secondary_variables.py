@@ -80,6 +80,9 @@ def get_gslen(ds):
     """
     var_hdates = "HDATES"
     var_sdates = "SDATES_PERHARV"
+    if not var_hdates in ds and var_sdates in ds:
+        return None
+
     da_hdates = ds[var_hdates]
     da_sdates = ds[var_sdates]
 
