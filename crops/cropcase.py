@@ -140,22 +140,19 @@ class CropCase:
         """
         self.verbose = verbose
         self.name = name
-        # Get the tape we need to import (h0i, h2a, etc.)
-        this_h_tape = _get_crop_tape(file_dir, name)
-        # Get list of all files
-        file_pattern = os.path.join(file_dir, name + ".clm2." + this_h_tape + ".*.nc")
-        file_list = np.sort(glob.glob(file_pattern))
-        if len(file_list) == 0:
-            raise FileNotFoundError("No files found matching pattern: " + file_pattern)
-
-        # Get list of files to actually include
+        self.file_dir = file_dir
         self.file_list = []
-        for filename in file_list:
-            ds = xr.open_dataset(filename)
-            if ds.time.values[0].year <= end_year and start_year <= ds.time.values[-1].year:
-                self.file_list.append(filename)
-        if not self.file_list:
-            raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
+        self.cft_list = None
+        self.crop_list = None
+        self.cft_ds = None
+
+        self._read_and_process_files(cfts_to_include, crops_to_include, start_year, end_year, n_pfts)
+
+    def _read_and_process_files(self, cfts_to_include, crops_to_include, start_year, end_year, n_pfts):
+        """
+        Read all history files and create the "CFT dataset"
+        """
+        self._get_file_list(start_year, end_year)
 
         # Read files
         # Adding join="override", compat="override", coords="minimal", doesn't fix the graph size
@@ -173,13 +170,46 @@ class CropCase:
             preprocess=_mf_preproc,
         )
 
-        # Get CFT info
+        # Get CFT and crop lists
+        self._get_cft_and_crop_lists(cfts_to_include, crops_to_include, n_pfts, ds)
+
+        # Save CFT dataset
+        self._get_cft_ds(crops_to_include, ds)
+
+    def _get_file_list(self, start_year, end_year):
+        """
+        Get the files to import
+        """
+        # Get the tape we need to import (h0i, h2a, etc.)
+        this_h_tape = _get_crop_tape(self.file_dir, self.name)
+        # Get list of all files
+        file_pattern = os.path.join(self.file_dir, self.name + ".clm2." + this_h_tape + ".*.nc")
+        file_list = np.sort(glob.glob(file_pattern))
+        if len(file_list) == 0:
+            raise FileNotFoundError("No files found matching pattern: " + file_pattern)
+
+        # Get list of files to actually include
+        for filename in file_list:
+            ds = xr.open_dataset(filename)
+            if ds.time.values[0].year <= end_year and start_year <= ds.time.values[-1].year:
+                self.file_list.append(filename)
+        if not self.file_list:
+            raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
+
+    def _get_cft_and_crop_lists(self, cfts_to_include, crops_to_include, n_pfts, ds):
+        """
+        Get lists of CFTs and crops included in history
+        """
+        # Get CFT list
         self.cft_list = CftList(ds, n_pfts, cfts_to_include)
 
         # Get crop list
         self.crop_list = CropList(crops_to_include, self.cft_list, ds)
 
-        # Save CFT dataset
+    def _get_cft_ds(self, crops_to_include, ds):
+        """
+        Postprocess the history dataset into the "CFT dataset"
+        """
         for i, cft in enumerate(self.cft_list):
             this_cft_ds = cu.get_cft_ds(ds, cft)
 
