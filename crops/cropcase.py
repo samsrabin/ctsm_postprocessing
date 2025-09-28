@@ -22,6 +22,7 @@ try:
     from . import crop_utils as cu
     from .crop_defaults import N_PFTS
     from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
+    from .extra_area_prod_yield_etc import extra_area_prod_yield_etc
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -31,6 +32,7 @@ except ImportError:
     import crops.crop_secondary_variables as c2o
     import crops.crop_utils as cu
     from crops.crop_defaults import N_PFTS
+    from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
 
@@ -82,6 +84,22 @@ def _get_crop_tape(file_dir, name):
     if this_h_tape is None:
         raise KeyError(f"No history tape in {h_tapes} had {test_var}")
     return this_h_tape
+
+
+def _get_area_p(ds):
+    """
+    Get area of gridcell that is parent of each pft (patch)
+    """
+    area_g = []
+    for i, lon in enumerate(ds["grid1d_lon"].values):
+        lat = ds["grid1d_lat"].values[i]
+        area_g.append(ds["area"].sel(lat=lat, lon=lon))
+    area_g = np.array(area_g)
+    area_p = []
+    for i in ds["pfts1d_gi"].isel(cft=0).values:
+        area_p.append(area_g[int(i) - 1])
+    area_p = np.array(area_p)
+    return area_p
 
 
 class CropCase:
@@ -205,6 +223,18 @@ class CropCase:
 
         # Get yield, marking non-viable harvests as zero and converting to wet matter
         self.get_yield()
+
+        # Get gridcell area
+        self.cft_ds.load()
+        area_p = _get_area_p(self.cft_ds)
+        self.cft_ds["pfts1d_gridcellarea"] = xr.DataArray(
+            data=area_p,
+            coords={"pft": self.cft_ds["pft"].values},
+            dims=["pft"],
+        )
+
+        # Get more stuff
+        self.cft_ds = extra_area_prod_yield_etc(crops_to_include, self)
 
     def get_yield(self):
         """
