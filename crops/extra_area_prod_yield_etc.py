@@ -8,11 +8,10 @@ import numpy as np
 import xarray as xr
 
 
-def extra_area_prod_yield_etc(crops_to_include, case):
+def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     """
     Calculate some extra area, prod, yield, etc. variables
     """
-    case_ds = case.cft_ds
 
     # Set up for adding cft_crop variable
     cft_crop_array = np.full(case_ds.sizes["cft"], "", dtype=object)
