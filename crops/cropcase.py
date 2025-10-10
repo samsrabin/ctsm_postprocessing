@@ -35,6 +35,8 @@ except ImportError:
     from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
+CFT_DS_FILENAME = "cft_ds.nc"
+
 
 def _mf_preproc(ds):
     # If we care about pfts1d_wtgcell (the fraction of the grid cell taken up by each PFT during the
@@ -151,29 +153,59 @@ class CropCase:
         # Create CFT dataset file if needed
         if cft_ds_dir is None:
             cft_ds_dir = self.file_dir
-        self.cft_ds_file = os.path.join(cft_ds_dir, "cft_ds.nc")
+        self.cft_ds_file = os.path.join(cft_ds_dir, CFT_DS_FILENAME)
         if force_new_cft_ds_file or not os.path.exists(self.cft_ds_file):
+            user_has_write_perms = os.access(cft_ds_dir, os.W_OK)
+            if user_has_write_perms:
+                # If we're generating cft_ds.nc, we'll read all years
+                start_file_year = None
+                end_file_year = None
+            else:
+                print(
+                    f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
+                )
+                start_file_year = start_year
+                end_file_year = end_year
+            msg = f"Making {CFT_DS_FILENAME}"
+            if user_has_write_perms:
+                msg = msg.replace("Making", "Making and saving")
             start = time()
-            self._read_and_process_files(cfts_to_include, crops_to_include, n_pfts)
+            self.cft_ds = self._read_and_process_files(
+                cfts_to_include,
+                crops_to_include,
+                n_pfts,
+                start_file_year,
+                end_file_year,
+            )
+            if user_has_write_perms:
+                if self.verbose:
+                    print(f"Saving {self.cft_ds_file}...")
+                self.cft_ds.to_netcdf(self.cft_ds_file)
             end = time()
-            print(f"Making and saving cft_ds took {int(end - start)} s")
+            if self.verbose:
+                print(f"{msg} took {int(end - start)} s")
 
         # Open CFT dataset and slice based on years
-        start = time()
-        self.cft_ds = xr.open_dataset(self.cft_ds_file, decode_timedelta=False)
-        start_date = f"{start_year}-01-01"
-        end_date = f"{end_year}-12-31"
-        time_slice = slice(start_date, end_date)
-        self.cft_ds = self.cft_ds.sel(time=time_slice)
-        self.cft_ds.load()
-        end = time()
-        print(f"Opening cft_ds took {int(end - start)} s")
+        if os.path.exists(self.cft_ds_file):
+            # Always prefer to read from the file, to ensure consistency of performance
+            self.cft_ds = None
+            start = time()
+            self.cft_ds = xr.open_dataset(self.cft_ds_file, decode_timedelta=False)
+            start_date = f"{start_year}-01-01"
+            end_date = f"{end_year}-12-31"
+            time_slice = slice(start_date, end_date)
+            self.cft_ds = self.cft_ds.sel(time=time_slice)
+            self.cft_ds.load()
+            end = time()
+            print(f"Opening cft_ds took {int(end - start)} s")
 
-    def _read_and_process_files(self, cfts_to_include, crops_to_include, n_pfts):
+    def _read_and_process_files(
+        self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year
+    ):
         """
         Read all history files and create the "CFT dataset"
         """
-        self._get_file_list()
+        self._get_file_list(start_year, end_year)
 
         # Read files
         # Adding join="override", compat="override", coords="minimal", doesn't fix the graph size
@@ -198,11 +230,9 @@ class CropCase:
         # Process into CFT dataset
         cft_ds = self._get_cft_ds(crops_to_include, ds)
 
-        # Save CFT dataset
-        print(f"Saving {self.cft_ds_file}...")
-        cft_ds.to_netcdf(self.cft_ds_file)
+        return cft_ds
 
-    def _get_file_list(self):
+    def _get_file_list(self, start_year, end_year):
         """
         Get the files to import
         """
@@ -210,9 +240,19 @@ class CropCase:
         this_h_tape = _get_crop_tape(self.file_dir, self.name)
         # Get list of all files
         file_pattern = os.path.join(self.file_dir, self.name + ".clm2." + this_h_tape + ".*.nc")
-        self.file_list = np.sort(glob.glob(file_pattern))
-        if len(self.file_list) == 0:
+        file_list = np.sort(glob.glob(file_pattern))
+        if len(file_list) == 0:
             raise FileNotFoundError("No files found matching pattern: " + file_pattern)
+
+        # Get list of files to actually include
+        for filename in file_list:
+            ds = xr.open_dataset(filename)
+            start_year_ok = start_year is None or start_year <= ds.time.values[-1].year
+            end_year_ok = end_year is None or ds.time.values[0].year <= end_year
+            if start_year_ok and end_year_ok:
+                self.file_list.append(filename)
+        if not self.file_list:
+            raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
 
     def _get_cft_and_crop_lists(self, cfts_to_include, crops_to_include, n_pfts, ds):
         """
@@ -307,12 +347,16 @@ class CropCase:
             new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
             da_new = cft_ds[v] * is_valid_harvest
             cft_ds[new_var] = da_new
-            cft_ds[new_var].attrs["long_name"] = "grain C to food in VIABLE harvested organ per harvest"
+            cft_ds[new_var].attrs[
+                "long_name"
+            ] = "grain C to food in VIABLE harvested organ per harvest"
 
             # Get annual values
             new_var_ann = new_var.replace("PERHARV", "ANN")
             cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
-            cft_ds[new_var].attrs["long_name"] = "grain C to food in VIABLE harvested organ per calendar year"
+            cft_ds[new_var].attrs[
+                "long_name"
+            ] = "grain C to food in VIABLE harvested organ per calendar year"
 
         # Calculate actual yield (wet matter)
         c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
@@ -321,7 +365,9 @@ class CropCase:
             for i, pft_int in enumerate(cft_ds["cft"].values):
                 pft_str = ivt_int2str(pft_int)
                 if cft_ds[c_var].dims[0] != "cft":
-                    raise NotImplementedError("Below code (wm_arr[i]) assumes cft is the 0th dimension")
+                    raise NotImplementedError(
+                        "Below code (wm_arr[i]) assumes cft is the 0th dimension"
+                    )
                 wm_arr[i] = cft_ds[c_var].sel(cft=pft_int)
                 wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
             cft_ds["YIELD_PERHARV"] = xr.DataArray(
@@ -330,7 +376,7 @@ class CropCase:
                 dims=cft_ds[c_var].dims,
                 attrs={
                     "long_name": "viable wet matter yield (minus losses) per harvest",
-                    "units": "g wet matter / m^2"
+                    "units": "g wet matter / m^2",
                 },
             )
             cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests")
