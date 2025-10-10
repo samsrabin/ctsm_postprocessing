@@ -14,7 +14,7 @@ try:
     from ..crops import crop_secondary_variables as c2o
 except ImportError:
     # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from crops import crop_secondary_variables as c2o
 
 # pylint: disable=protected-access

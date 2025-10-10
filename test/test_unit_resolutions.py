@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 
 # pylint: disable=wrong-import-position
-x = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+x = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(x)
 import resolutions as res
 

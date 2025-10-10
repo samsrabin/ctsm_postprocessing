@@ -12,7 +12,7 @@ try:
     from ..cropcase import CropCase
 except ImportError:
     # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from crops.cropcase import CropCase
 
 cfts_to_include = [

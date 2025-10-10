@@ -13,7 +13,7 @@ try:
     from ..crops import faostat
 except ImportError:
     # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from crops import faostat
 
 # pylint: disable=protected-access
