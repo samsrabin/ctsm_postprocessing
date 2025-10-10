@@ -96,8 +96,9 @@ def _get_area_p(ds):
         area_g.append(ds["area"].sel(lat=lat, lon=lon))
     area_g = np.array(area_g)
     area_p = []
+    gridcell_vals = list(np.unique(ds["pfts1d_gi"].isel(cft=0).values))
     for i in ds["pfts1d_gi"].isel(cft=0).values:
-        area_p.append(area_g[int(i) - 1])
+        area_p.append(area_g[gridcell_vals.index(int(i))])
     area_p = np.array(area_p)
     return area_p
 
