@@ -8,14 +8,15 @@ import shutil
 import unittest
 import tempfile
 import numpy as np
+import xarray as xr
 
 try:
     # Attempt relative import if running as part of a package
-    from ..cropcase import CropCase
+    from ..cropcase import CropCase, CFT_DS_FILENAME
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from crops.cropcase import CropCase
+    from crops.cropcase import CropCase, CFT_DS_FILENAME
 
 cfts_to_include = [
     "temperate_corn",
@@ -100,3 +101,7 @@ class TestSysCropCase(unittest.TestCase):
         # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
         # doesn't have any NaN values.
         self.assertFalse(np.any(np.isnan(this_case.cft_ds["YIELD_ANN"])))
+
+        # Ensure that saved file has all 5 years even though we only asked for 3
+        ds = xr.open_dataset(os.path.join(self._tempdir, CFT_DS_FILENAME))
+        self.assertTrue(ds.sizes["time"] == 5)
