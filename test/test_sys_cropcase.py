@@ -43,8 +43,8 @@ crops_to_include = [
     "wheat",
 ]
 
-START_YEAR = 2023
-END_YEAR = 2024
+START_YEAR = 1988
+END_YEAR = 1990
 
 
 class TestSysCropCase(unittest.TestCase):
@@ -56,7 +56,7 @@ class TestSysCropCase(unittest.TestCase):
         """
         Make sure that CropCase does not error when importing test data
         """
-        name = "ctsm53019_f09_BNF_hist"
+        name = "crujra_matreqs"
         file_dir = os.path.join(os.path.dirname(__file__), "testdata")
         this_case = CropCase(
             name=name,
