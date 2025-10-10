@@ -4,7 +4,9 @@ Module to unit-test cropcase.py
 
 import sys
 import os
+import shutil
 import unittest
+import tempfile
 import numpy as np
 
 try:
@@ -52,6 +54,15 @@ class TestSysCropCase(unittest.TestCase):
     Class for testing CropCase
     """
 
+    def setUp(self):
+        self._tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """
+        Remove temporary directory
+        """
+        shutil.rmtree(self._tempdir, ignore_errors=True)
+
     def test_setup_cropcase(self):
         """
         Make sure that CropCase does not error when importing test data
@@ -65,6 +76,7 @@ class TestSysCropCase(unittest.TestCase):
             end_year=END_YEAR,
             cfts_to_include=cfts_to_include,
             crops_to_include=crops_to_include,
+            cft_ds_dir=self._tempdir,
         )
         self.assertListEqual(
             [x.name for x in this_case.crop_list],

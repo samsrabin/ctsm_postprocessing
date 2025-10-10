@@ -124,6 +124,7 @@ class CropCase:
         verbose=False,
         n_pfts=N_PFTS,
         force_new_cft_ds_file=False,
+        cft_ds_dir=None,
     ):
         # pylint: disable=too-many-positional-arguments
         """
@@ -147,7 +148,9 @@ class CropCase:
         self.crop_list = None
 
         # Create CFT dataset file if needed
-        self.cft_ds_file = os.path.join(self.file_dir, "cft_ds.nc")
+        if cft_ds_dir is None:
+            cft_ds_dir = self.file_dir
+        self.cft_ds_file = os.path.join(cft_ds_dir, "cft_ds.nc")
         if force_new_cft_ds_file or not os.path.exists(self.cft_ds_file):
             start = time()
             self._read_and_process_files(cfts_to_include, crops_to_include, n_pfts)
