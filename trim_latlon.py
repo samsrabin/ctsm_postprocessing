@@ -57,7 +57,7 @@ def main():
         sys.exit(1)
 
     # Import
-    ds = xr.open_dataset(filename_in)
+    ds = xr.open_dataset(filename_in, decode_timedelta=False)
 
     # Check that dataset longitudes are in [0, 360) format
     lon_min = np.min(ds["lon"].values)
