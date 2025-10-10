@@ -77,7 +77,7 @@ def _get_crop_tape(file_dir, name):
         if not file_list:
             print(f"_get_crop_tape(): No {h_tape} files found")
             continue
-        ds = xr.open_dataset(file_list[0])
+        ds = xr.open_dataset(file_list[0], decode_timedelta=False)
         if test_var in ds:
             this_h_tape = h_tape
             break
@@ -160,7 +160,7 @@ class CropCase:
 
         # Open CFT dataset and slice based on years
         start = time()
-        self.cft_ds = xr.open_dataset(self.cft_ds_file)
+        self.cft_ds = xr.open_dataset(self.cft_ds_file, decode_timedelta=False)
         start_date = f"{start_year}-01-01"
         end_date = f"{end_year}-12-31"
         time_slice = slice(start_date, end_date)
@@ -189,6 +189,7 @@ class CropCase:
             # combine="nested", concat_dim="time",
             data_vars="minimal",
             preprocess=_mf_preproc,
+            decode_timedelta=False,
         )
 
         # Get CFT and crop lists
