@@ -1,6 +1,7 @@
 """
 Calculate some extra area, prod, yield, etc. variables
 """
+
 # TODO: Move this to CropCase?
 from __future__ import annotations
 
@@ -57,9 +58,7 @@ def _get_yield_and_croplevel_stats(case_ds):
     """
     case_ds["crop_cft_yield"] = case_ds["crop_cft_prod"] / case_ds["crop_cft_area"]
     case_ds["crop_cft_yield"].attrs["units"] = (
-        case_ds["crop_cft_prod"].attrs["units"]
-        + "/"
-        + case_ds["crop_cft_area"].attrs["units"]
+        case_ds["crop_cft_prod"].attrs["units"] + "/" + case_ds["crop_cft_area"].attrs["units"]
     )
 
     # Collapse CFTs to individual crops
@@ -77,9 +76,7 @@ def _get_yield_and_croplevel_stats(case_ds):
 
 def _harvest_area_stats(case_ds):
     hr = case_ds["HARVEST_REASON_PERHARV"]
-    cft_planted_area = (
-        case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]
-    ).where(
+    cft_planted_area = (case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]).where(
         case_ds["pfts1d_wtgcell"] > 0,
     ) * 1e6  # convert km2 to m2
     cft_planted_area.attrs["units"] = "m2"
