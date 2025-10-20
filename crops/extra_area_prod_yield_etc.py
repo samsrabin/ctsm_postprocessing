@@ -62,8 +62,18 @@ def _get_yield_and_croplevel_stats(case_ds):
     )
 
     # Collapse CFTs to individual crops
-    case_ds["crop_area"] = case_ds["crop_cft_area"].sum(dim="cft", keep_attrs=True)
-    case_ds["crop_prod"] = case_ds["crop_cft_prod"].sum(dim="cft", keep_attrs=True)
+    case_ds["crop_area"] = (
+        case_ds["crop_cft_area"]
+        .groupby(case_ds["cft_crop"])
+        .sum(dim="cft", keep_attrs=True)
+        .rename({"cft_crop": "crop"})
+    )
+    case_ds["crop_prod"] = (
+        case_ds["crop_cft_prod"]
+        .groupby(case_ds["cft_crop"])
+        .sum(dim="cft", keep_attrs=True)
+        .rename({"cft_crop": "crop"})
+    )
 
     # Calculate crop-level yield
     case_ds["crop_yield"] = case_ds["crop_prod"] / case_ds["crop_area"]
@@ -139,32 +149,23 @@ def _one_crop(
     cft_prod.attrs["units"] = "g"
 
     # Setup crop_cft_* variables or append to them
-    cft_area_expanded = cft_area.expand_dims(dim="crop", axis=0)
-    cft_prod_expanded = cft_prod.expand_dims(dim="crop", axis=0)
     if i == 0:
-        # Add crop (names) variable/dimension to case_ds, if needed
-        if "crop" not in case_ds:
-            crop_da = xr.DataArray(
-                data=crops_to_include,
-                dims=["crop"],
-            )
-            case_ds["crop"] = crop_da
         # Define crop_cft_* variables
         crop_cft_area_da = xr.DataArray(
-            data=cft_area_expanded,
+            data=cft_area,
         )
         crop_cft_prod_da = xr.DataArray(
-            data=cft_prod_expanded,
+            data=cft_prod,
         )
     else:
         # Append this crop's DataArrays to existing ones
         crop_cft_area_da = xr.concat(
-            [crop_cft_area_da, cft_area_expanded],
-            dim="crop",
+            [crop_cft_area_da, cft_area],
+            dim="cft",
         )
         crop_cft_prod_da = xr.concat(
-            [crop_cft_prod_da, cft_prod_expanded],
-            dim="crop",
+            [crop_cft_prod_da, cft_prod],
+            dim="cft",
         )
 
     return cft_crop_array, crop_cft_area_da, crop_cft_prod_da
