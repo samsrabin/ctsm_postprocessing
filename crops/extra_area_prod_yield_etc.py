@@ -8,6 +8,8 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
+from .combine_cft_to_crop import _one_crop
+
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     """
@@ -22,7 +24,6 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     for i, crop in enumerate(crops_to_include):
         # Get data for CFTs of this crop
         cft_crop_array, crop_cft_area_da, crop_cft_prod_da = _one_crop(
-            crops_to_include,
             case,
             case_ds,
             cft_crop_array,
@@ -31,6 +32,11 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
             crop_cft_area_da,
             crop_cft_prod_da,
         )
+
+    # Convert/set units
+    crop_cft_area_da *= 1e6  # Convert km2 to m2
+    crop_cft_area_da.attrs["units"] = "m2"
+    crop_cft_prod_da.attrs["units"] = "g"
 
     # Save cft_crop variable
     case_ds["cft_crop"] = xr.DataArray(
@@ -117,55 +123,3 @@ def _harvest_area_stats(case_ds):
     )
 
     return case_ds
-
-
-def _one_crop(
-    crops_to_include,
-    case,
-    case_ds,
-    cft_crop_array,
-    i,
-    crop,
-    crop_cft_area_da,
-    crop_cft_prod_da,
-):
-    """
-    Process things for one crop
-    """
-    pft_nums = case.crop_list[crop].pft_nums
-    cft_ds = case_ds.sel(cft=pft_nums)
-
-    # Save name of this crop for cft_crop variable
-    for pft_num in pft_nums:
-        cft_crop_array[np.where(case_ds["cft"].values == pft_num)] = crop
-
-    # Get area
-    cft_area = cft_ds["pfts1d_gridcellarea"] * cft_ds["pfts1d_wtgcell"]
-    cft_area *= 1e6  # Convert km2 to m2
-    cft_area.attrs["units"] = "m2"
-
-    # Get production
-    cft_prod = cft_ds["YIELD_ANN"] * cft_area
-    cft_prod.attrs["units"] = "g"
-
-    # Setup crop_cft_* variables or append to them
-    if i == 0:
-        # Define crop_cft_* variables
-        crop_cft_area_da = xr.DataArray(
-            data=cft_area,
-        )
-        crop_cft_prod_da = xr.DataArray(
-            data=cft_prod,
-        )
-    else:
-        # Append this crop's DataArrays to existing ones
-        crop_cft_area_da = xr.concat(
-            [crop_cft_area_da, cft_area],
-            dim="cft",
-        )
-        crop_cft_prod_da = xr.concat(
-            [crop_cft_prod_da, cft_prod],
-            dim="cft",
-        )
-
-    return cft_crop_array, crop_cft_area_da, crop_cft_prod_da
