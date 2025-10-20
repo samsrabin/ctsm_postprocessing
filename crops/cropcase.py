@@ -127,6 +127,7 @@ class CropCase:
         verbose=False,
         n_pfts=N_PFTS,
         force_new_cft_ds_file=False,
+        force_no_cft_ds_file=False,
         cft_ds_dir=None,
     ):
         # pylint: disable=too-many-positional-arguments
@@ -143,6 +144,7 @@ class CropCase:
             verbose (bool): Whether to print verbose output. Default False.
             n_pfts (int): Number of PFTs. Default N_PFTS.
             force_new_cft_ds_file (bool): Even if cft_ds file exists, read and save a new one. Default False.
+            force_no_cft_ds_file (bool): Don't try to read or save cft_ds file.
             cft_ds_dir (str): Where to save the cft_ds file. Default same as file_dir.
         """
         self.verbose = verbose
@@ -152,24 +154,30 @@ class CropCase:
         self.cft_list = None
         self.crop_list = None
 
+        # Check incompatible options
+        if force_new_cft_ds_file and force_no_cft_ds_file:
+            raise ValueError("force_new_cft_ds_file and force_no_cft_ds_file can't both be True")
+
         # Create CFT dataset file if needed
         if cft_ds_dir is None:
             cft_ds_dir = self.file_dir
         self.cft_ds_file = os.path.join(cft_ds_dir, CFT_DS_FILENAME)
-        if force_new_cft_ds_file or not os.path.exists(self.cft_ds_file):
+        if force_new_cft_ds_file or force_no_cft_ds_file or not os.path.exists(self.cft_ds_file):
             user_has_write_perms = os.access(cft_ds_dir, os.W_OK)
-            if user_has_write_perms:
+            save_netcdf = user_has_write_perms and not force_no_cft_ds_file
+            if save_netcdf:
                 # If we're generating cft_ds.nc, we'll read all years
                 start_file_year = None
                 end_file_year = None
             else:
-                print(
-                    f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
-                )
+                if not user_has_write_perms and not force_no_cft_ds_file:
+                    print(
+                        f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
+                    )
                 start_file_year = start_year
                 end_file_year = end_year
             msg = f"Making {CFT_DS_FILENAME}"
-            if user_has_write_perms:
+            if save_netcdf:
                 msg = msg.replace("Making", "Making and saving")
             start = time()
             self.cft_ds = self._read_and_process_files(
@@ -179,7 +187,7 @@ class CropCase:
                 start_file_year,
                 end_file_year,
             )
-            if user_has_write_perms:
+            if save_netcdf:
                 if self.verbose:
                     print(f"Saving {self.cft_ds_file}...")
                 self.cft_ds.to_netcdf(self.cft_ds_file)
@@ -188,7 +196,7 @@ class CropCase:
                 print(f"{msg} took {int(end - start)} s")
 
         # Open CFT dataset and slice based on years
-        if os.path.exists(self.cft_ds_file):
+        if os.path.exists(self.cft_ds_file) and not force_no_cft_ds_file:
             # Always prefer to read from the file, to ensure consistency of performance
             self.cft_ds = None
             start = time()

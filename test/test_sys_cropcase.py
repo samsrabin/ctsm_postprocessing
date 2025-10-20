@@ -153,3 +153,51 @@ class TestSysCropCase(unittest.TestCase):
 
         # Set user write bit
         os.chmod(self._tempdir, 0o644)
+
+    def test_setup_cropcase_nofile(self):
+        """
+        Make sure that CropCase doesn't try to save file if user DOES have write perms but says
+        force_no_cft_ds_file=True
+        """
+        name = "crujra_matreqs"
+        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+        this_case = CropCase(
+            name=name,
+            file_dir=file_dir,
+            start_year=START_YEAR,
+            end_year=END_YEAR,
+            cfts_to_include=cfts_to_include,
+            crops_to_include=crops_to_include,
+            cft_ds_dir=self._tempdir,
+            force_no_cft_ds_file=True,
+        )
+        self.assertListEqual(
+            [x.name for x in this_case.crop_list],
+            ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
+        )
+
+        # Ensure that at least one derived variable is present.
+        self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
+
+        # Ensure file wasn't saved
+        self.assertFalse(os.path.exists(os.path.join(self._tempdir, CFT_DS_FILENAME)))
+
+    def test_setup_cropcase_error_if_newfile_and_nofile(self):
+        """
+        Make sure that CropCase raises error if both force_new_cft_ds_file and force_no_cft_ds_file
+        are true
+        """
+        name = "crujra_matreqs"
+        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+        with self.assertRaises(ValueError):
+            this_case = CropCase(
+                name=name,
+                file_dir=file_dir,
+                start_year=START_YEAR,
+                end_year=END_YEAR,
+                cfts_to_include=cfts_to_include,
+                crops_to_include=crops_to_include,
+                cft_ds_dir=self._tempdir,
+                force_new_cft_ds_file=True,
+                force_no_cft_ds_file=True,
+            )
