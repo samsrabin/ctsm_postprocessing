@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from .combine_cft_to_crop import get_cft_crop_da, combine_cft_to_crop
+from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
 
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
@@ -20,11 +20,11 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     case_ds["cft_area"] = case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]
     case_ds["cft_area"] *= 1e6  # Convert km2 to m2
     case_ds["cft_area"].attrs["units"] = "m2"
-    crop_cft_area_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_area")
+    crop_cft_area_da = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_area")
 
     # Calculate CFT production
     case_ds["cft_prod"] = case_ds["YIELD_ANN"] * case_ds["cft_area"]
-    crop_cft_prod_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_prod")
+    crop_cft_prod_da = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_prod")
 
     # Convert/set units
     crop_cft_prod_da.attrs["units"] = "g"
@@ -56,18 +56,8 @@ def _get_yield_and_croplevel_stats(case_ds):
     )
 
     # Collapse CFTs to individual crops
-    case_ds["crop_area"] = (
-        case_ds["crop_cft_area"]
-        .groupby(case_ds["cft_crop"])
-        .sum(dim="cft", keep_attrs=True)
-        .rename({"cft_crop": "crop"})
-    )
-    case_ds["crop_prod"] = (
-        case_ds["crop_cft_prod"]
-        .groupby(case_ds["cft_crop"])
-        .sum(dim="cft", keep_attrs=True)
-        .rename({"cft_crop": "crop"})
-    )
+    case_ds = combine_cft_to_crop(case_ds, "crop_cft_area", "crop_area", "sum", keep_attrs=True)
+    case_ds = combine_cft_to_crop(case_ds, "crop_cft_prod", "crop_prod", "sum", keep_attrs=True)
 
     # Calculate crop-level yield
     case_ds["crop_yield"] = case_ds["crop_prod"] / case_ds["crop_area"]

@@ -51,7 +51,7 @@ def _one_crop(
     return crop_cft_da_io
 
 
-def combine_cft_to_crop(crops_to_include, case, case_ds, var):
+def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
     crop_cft_da = None
     for crop in crops_to_include:
         # Get data for CFTs of this crop
@@ -64,3 +64,28 @@ def combine_cft_to_crop(crops_to_include, case, case_ds, var):
         )
 
     return crop_cft_da
+
+
+def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
+
+    da_grouped = ds[var_in].groupby(ds["cft_crop"])
+
+    # First, see if you can call the given method directly
+    if callable(method):
+        da = method(**kwargs)
+
+    # Next, try to find the method in the Xarray DataArray
+    elif hasattr(da_grouped, method) and callable(getattr(da_grouped, method)):
+        da = getattr(da_grouped, method)(dim="cft", **kwargs)
+
+    # Finally, check if it's a Numpy method
+    elif hasattr(np, method) and callable(getattr(np, method)):
+        da = getattr(np, method)(**kwargs)
+
+    # If none of those worked, throw an error
+    else:
+        raise AttributeError(f"Method '{method}' not found")
+
+    ds[var_out] = da.rename({"cft_crop": "crop"})
+
+    return ds
