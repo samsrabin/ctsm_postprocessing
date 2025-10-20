@@ -134,8 +134,6 @@ class TestSysCropCase(unittest.TestCase):
         self.assertTrue(ds.sizes["time"] == 5)
 
         # Ensure that values of some derived variables are correct
-        self.assertAlmostEqual(this_case.cft_ds["cft_area"].mean().values, 379009483.94271624)
-        self.assertAlmostEqual(this_case.cft_ds["cft_prod"].mean().values, 198672315418.34552)
         self.assertAlmostEqual(this_case.cft_ds["crop_cft_area"].mean().values, 379009483.94271624)
         self.assertAlmostEqual(this_case.cft_ds["crop_cft_prod"].mean().values, 198672315418.34552)
         self.assertAlmostEqual(this_case.cft_ds["crop_cft_yield"].mean().values, 602.2368436177571)

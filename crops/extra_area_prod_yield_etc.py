@@ -43,6 +43,9 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     # Area harvested
     case_ds = _harvest_area_stats(case_ds)
 
+    # Drop things we don't need anymore
+    case_ds = case_ds.drop_vars(["cft_area", "cft_prod"])
+
     return case_ds
 
 
