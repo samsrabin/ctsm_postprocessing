@@ -16,15 +16,17 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     Calculate some extra area, prod, yield, etc. variables
     """
 
-    # Calculate CFT area and production
+    # Calculate CFT area
     case_ds["cft_area"] = case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]
+    case_ds["cft_area"] *= 1e6  # Convert km2 to m2
+    case_ds["cft_area"].attrs["units"] = "m2"
     crop_cft_area_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_area")
+
+    # Calculate CFT production
     case_ds["cft_prod"] = case_ds["YIELD_ANN"] * case_ds["cft_area"]
     crop_cft_prod_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_prod")
 
     # Convert/set units
-    crop_cft_area_da *= 1e6  # Convert km2 to m2
-    crop_cft_area_da.attrs["units"] = "m2"
     crop_cft_prod_da.attrs["units"] = "g"
 
     # Save cft_crop variable
