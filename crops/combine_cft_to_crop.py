@@ -26,40 +26,41 @@ def get_cft_crop_da(crops_to_include, case, case_ds):
 def _one_crop(
     case,
     case_ds,
-    i,
     crop,
-    crop_cft_area_da,
-    crop_cft_prod_da,
+    var,
+    crop_cft_da_io,
 ):
     """
     Process things for one crop
     """
-    cft_ds = case_ds.sel(cft=case.crop_list[crop].pft_nums)
-
-    # Get area
-    cft_area = cft_ds["pfts1d_gridcellarea"] * cft_ds["pfts1d_wtgcell"]
-
-    # Get production
-    cft_prod = cft_ds["YIELD_ANN"] * cft_area
+    crop_cft_da = case_ds.sel(cft=case.crop_list[crop].pft_nums)[var]
 
     # Setup crop_cft_* variables or append to them
-    if i == 0:
+    if crop_cft_da_io is None:
         # Define crop_cft_* variables
-        crop_cft_area_da = xr.DataArray(
-            data=cft_area,
-        )
-        crop_cft_prod_da = xr.DataArray(
-            data=cft_prod,
+        crop_cft_da_io = xr.DataArray(
+            data=crop_cft_da,
         )
     else:
         # Append this crop's DataArrays to existing ones
-        crop_cft_area_da = xr.concat(
-            [crop_cft_area_da, cft_area],
-            dim="cft",
-        )
-        crop_cft_prod_da = xr.concat(
-            [crop_cft_prod_da, cft_prod],
+        crop_cft_da_io = xr.concat(
+            [crop_cft_da_io, crop_cft_da],
             dim="cft",
         )
 
-    return crop_cft_area_da, crop_cft_prod_da
+    return crop_cft_da_io
+
+
+def combine_cft_to_crop(crops_to_include, case, case_ds, var):
+    crop_cft_da = None
+    for crop in crops_to_include:
+        # Get data for CFTs of this crop
+        crop_cft_da = _one_crop(
+            case,
+            case_ds,
+            crop,
+            var,
+            crop_cft_da,
+        )
+
+    return crop_cft_da

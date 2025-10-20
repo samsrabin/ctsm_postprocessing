@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from .combine_cft_to_crop import _one_crop, get_cft_crop_da
+from .combine_cft_to_crop import get_cft_crop_da, combine_cft_to_crop
 
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
@@ -16,18 +16,11 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     Calculate some extra area, prod, yield, etc. variables
     """
 
-    crop_cft_area_da = None
-    crop_cft_prod_da = None
-    for i, crop in enumerate(crops_to_include):
-        # Get data for CFTs of this crop
-        crop_cft_area_da, crop_cft_prod_da = _one_crop(
-            case,
-            case_ds,
-            i,
-            crop,
-            crop_cft_area_da,
-            crop_cft_prod_da,
-        )
+    # Calculate CFT area and production
+    case_ds["cft_area"] = case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]
+    crop_cft_area_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_area")
+    case_ds["cft_prod"] = case_ds["YIELD_ANN"] * case_ds["cft_area"]
+    crop_cft_prod_da = combine_cft_to_crop(crops_to_include, case, case_ds, "cft_prod")
 
     # Convert/set units
     crop_cft_area_da *= 1e6  # Convert km2 to m2
