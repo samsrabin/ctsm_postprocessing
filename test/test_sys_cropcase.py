@@ -94,6 +94,10 @@ class TestSysCropCase(unittest.TestCase):
         self.assertTrue(np.any(this_case.cft_ds["YIELD_PERHARV"] > 0))
         self.assertTrue(np.any(this_case.cft_ds["YIELD_ANN"] > 0))
 
+        # Ensure that these derived variables have the right dims
+        self.assertTupleEqual(this_case.cft_ds["crop_cft_area"].dims, ("pft", "cft", "time"))
+        self.assertTupleEqual(this_case.cft_ds["crop_area"].dims, ("pft", "crop", "time"))
+
         # Ensure that NaN values are handled correctly.
         # First, ensure that there are actually some NaN values that will be tested.
         self.assertTrue(np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"])))
