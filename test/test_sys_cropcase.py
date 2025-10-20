@@ -84,6 +84,29 @@ class TestSysCropCase(unittest.TestCase):
             ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
         )
 
+        # Check that cft-to-crop is working right
+        self.assertListEqual(
+            list(this_case.cft_ds["cft_crop"].values),
+            [
+                "corn",
+                "corn",
+                "wheat",
+                "wheat",
+                "soybean",
+                "soybean",
+                "cotton",
+                "cotton",
+                "rice",
+                "rice",
+                "sugarcane",
+                "sugarcane",
+                "corn",
+                "corn",
+                "soybean",
+                "soybean",
+            ],
+        )
+
         # Ensure that derived variables are present.
         self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
         self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
@@ -109,6 +132,16 @@ class TestSysCropCase(unittest.TestCase):
         # Ensure that saved file has all 5 years even though we only asked for 3
         ds = xr.open_dataset(os.path.join(self._tempdir, CFT_DS_FILENAME))
         self.assertTrue(ds.sizes["time"] == 5)
+
+        # Ensure that values of some derived variables are correct
+        self.assertAlmostEqual(this_case.cft_ds["cft_area"].mean().values, 379009483.94271624)
+        self.assertAlmostEqual(this_case.cft_ds["cft_prod"].mean().values, 198672315418.34552)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_area"].mean().values, 379009483.94271624)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_prod"].mean().values, 198672315418.34552)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_yield"].mean().values, 602.2368436177571)
+        self.assertAlmostEqual(this_case.cft_ds["crop_area"].mean().values, 1010691957.1805767)
+        self.assertAlmostEqual(this_case.cft_ds["crop_prod"].mean().values, 529792841115.58826)
+        self.assertAlmostEqual(this_case.cft_ds["crop_yield"].mean().values, 568.3093914610291)
 
     def test_setup_cropcase_noperms(self):
         """
