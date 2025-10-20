@@ -232,6 +232,9 @@ class CropCase:
         # Process into CFT dataset
         cft_ds = self._get_cft_ds(crops_to_include, ds)
 
+        # Chunk
+        cft_ds = cft_ds.chunk(chunks={"cft": 1, "crop": 1})
+
         return cft_ds
 
     def _get_file_list(self, start_year, end_year):
