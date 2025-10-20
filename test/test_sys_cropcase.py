@@ -133,6 +133,16 @@ class TestSysCropCase(unittest.TestCase):
         ds = xr.open_dataset(os.path.join(self._tempdir, CFT_DS_FILENAME))
         self.assertTrue(ds.sizes["time"] == 5)
 
+        # Ensure that values of some derived variables are correct
+        self.assertAlmostEqual(this_case.cft_ds["cft_area"].mean().values, 379009483.94271624)
+        self.assertAlmostEqual(this_case.cft_ds["cft_prod"].mean().values, 198672315418.34552)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_area"].mean().values, 379009483.94271624)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_prod"].mean().values, 198672315418.34552)
+        self.assertAlmostEqual(this_case.cft_ds["crop_cft_yield"].mean().values, 602.2368436177571)
+        self.assertAlmostEqual(this_case.cft_ds["crop_area"].mean().values, 1010691957.1805767)
+        self.assertAlmostEqual(this_case.cft_ds["crop_prod"].mean().values, 529792841115.58826)
+        self.assertAlmostEqual(this_case.cft_ds["crop_yield"].mean().values, 568.3093914610291)
+
     def test_setup_cropcase_noperms(self):
         """
         Make sure that CropCase doesn't try to save file if user doesn't have write perms
