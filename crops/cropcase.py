@@ -140,8 +140,10 @@ class CropCase:
             crops_to_include (list): List of crops to include in the crop case.
             start_year (int): Start year for the crop data.
             end_year (int): End year for the crop data.
-            verbose (bool): Whether to print verbose output.
-            n_pfts (int): Number of PFTs.
+            verbose (bool): Whether to print verbose output. Default False.
+            n_pfts (int): Number of PFTs. Default N_PFTS.
+            force_new_cft_ds_file (bool): Even if cft_ds file exists, read and save a new one. Default False.
+            cft_ds_dir (str): Where to save the cft_ds file. Default same as file_dir.
         """
         self.verbose = verbose
         self.name = name
