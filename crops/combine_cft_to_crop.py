@@ -1,5 +1,9 @@
 """
-Function to combine CFTs into their corresponding crops
+Functions for combining CFTs (Crop Functional Types) into their corresponding crops.
+
+This module provides utilities to process and combine CFT-level data into crop-level
+data in CTSM (Community Terrestrial Systems Model) output. It handles the mapping
+between CFTs and crops and provides methods for aggregating CFT-level variables.
 """
 
 import numpy as np
@@ -8,7 +12,22 @@ import xarray as xr
 
 def get_cft_crop_da(crops_to_include, case, case_ds):
     """
-    Get cft-dimensioned DataArray with string values of Crop
+    Create a CFT-dimensioned DataArray mapping CFT indices to crop names.
+
+    Parameters
+    ----------
+    crops_to_include : list
+        List of crop names to process
+    case : object
+        Case object containing crop definitions and PFT mappings
+    case_ds : xarray.Dataset
+        Dataset containing CFT dimension information
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray with CFT dimension where each element contains the corresponding
+        crop name as a string
     """
     cft_crop_array = np.full(case_ds.sizes["cft"], "", dtype=object)
     for i, crop in enumerate(crops_to_include):
@@ -31,7 +50,26 @@ def _one_crop(
     crop_cft_da_io,
 ):
     """
-    Process things for one crop
+    Process data for a single crop type.
+
+    Parameters
+    ----------
+    case : object
+        Case object containing crop definitions
+    case_ds : xarray.Dataset
+        Dataset containing CFT-dimensioned data
+    crop : str
+        Name of the crop to process
+    var : str
+        Variable name to process
+    crop_cft_da_io : xarray.DataArray or None
+        Existing DataArray to append to, or None if this is the first crop
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray containing the processed data for the specified crop,
+        either as a new array or appended to the input array
     """
     crop_cft_da = case_ds.sel(cft=case.crop_list[crop].pft_nums)[var]
 
@@ -52,6 +90,25 @@ def _one_crop(
 
 
 def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
+    """
+    Process CFT data for all specified crops.
+
+    Parameters
+    ----------
+    crops_to_include : list
+        List of crop names to process
+    case : object
+        Case object containing crop definitions
+    case_ds : xarray.Dataset
+        Dataset containing CFT-dimensioned data
+    var : str
+        Variable name to process
+
+    Returns
+    -------
+    xarray.DataArray
+        Combined DataArray containing processed data for all specified crops
+    """
     crop_cft_da = None
     for crop in crops_to_include:
         # Get data for CFTs of this crop
@@ -67,7 +124,35 @@ def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
 
 
 def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
+    """
+    Combine CFT-level data into crop-level data using the specified method.
 
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Input dataset containing CFT-dimensioned data
+    var_in : str
+        Name of the input variable to process
+    var_out : str
+        Name of the output variable to create
+    method : callable or str
+        Method to use for combining CFT data. Can be:
+        - A callable function
+        - Name of an xarray groupby method
+        - Name of a numpy method
+    **kwargs
+        Additional keyword arguments passed to the combining method
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with the new crop-level variable added
+
+    Raises
+    ------
+    AttributeError
+        If the specified method cannot be found or is not callable
+    """
     da_grouped = ds[var_in].groupby(ds["cft_crop"])
 
     # First, see if you can call the given method directly
