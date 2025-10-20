@@ -6,10 +6,26 @@ import numpy as np
 import xarray as xr
 
 
+def get_cft_crop_da(crops_to_include, case, case_ds):
+    """
+    Get cft-dimensioned DataArray with string values of Crop
+    """
+    cft_crop_array = np.full(case_ds.sizes["cft"], "", dtype=object)
+    for i, crop in enumerate(crops_to_include):
+        for pft_num in case.crop_list[crop].pft_nums:
+            cft_crop_array[np.where(case_ds["cft"].values == pft_num)] = crop
+    cft_crop_da = xr.DataArray(
+        data=cft_crop_array,
+        dims=["cft"],
+        coords={"cft": case_ds["cft"]},
+    ).astype(str)
+
+    return cft_crop_da
+
+
 def _one_crop(
     case,
     case_ds,
-    cft_crop_array,
     i,
     crop,
     crop_cft_area_da,
@@ -18,12 +34,7 @@ def _one_crop(
     """
     Process things for one crop
     """
-    pft_nums = case.crop_list[crop].pft_nums
-    cft_ds = case_ds.sel(cft=pft_nums)
-
-    # Save name of this crop for cft_crop variable
-    for pft_num in pft_nums:
-        cft_crop_array[np.where(case_ds["cft"].values == pft_num)] = crop
+    cft_ds = case_ds.sel(cft=case.crop_list[crop].pft_nums)
 
     # Get area
     cft_area = cft_ds["pfts1d_gridcellarea"] * cft_ds["pfts1d_wtgcell"]
@@ -51,4 +62,4 @@ def _one_crop(
             dim="cft",
         )
 
-    return cft_crop_array, crop_cft_area_da, crop_cft_prod_da
+    return crop_cft_area_da, crop_cft_prod_da

@@ -84,6 +84,29 @@ class TestSysCropCase(unittest.TestCase):
             ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
         )
 
+        # Check that cft-to-crop is working right
+        self.assertListEqual(
+            list(this_case.cft_ds["cft_crop"].values),
+            [
+                "corn",
+                "corn",
+                "wheat",
+                "wheat",
+                "soybean",
+                "soybean",
+                "cotton",
+                "cotton",
+                "rice",
+                "rice",
+                "sugarcane",
+                "sugarcane",
+                "corn",
+                "corn",
+                "soybean",
+                "soybean",
+            ],
+        )
+
         # Ensure that derived variables are present.
         self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
         self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)

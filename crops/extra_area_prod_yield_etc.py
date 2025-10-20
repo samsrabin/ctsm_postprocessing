@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from .combine_cft_to_crop import _one_crop
+from .combine_cft_to_crop import _one_crop, get_cft_crop_da
 
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
@@ -16,17 +16,13 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     Calculate some extra area, prod, yield, etc. variables
     """
 
-    # Set up for adding cft_crop variable
-    cft_crop_array = np.full(case_ds.sizes["cft"], "", dtype=object)
-
     crop_cft_area_da = None
     crop_cft_prod_da = None
     for i, crop in enumerate(crops_to_include):
         # Get data for CFTs of this crop
-        cft_crop_array, crop_cft_area_da, crop_cft_prod_da = _one_crop(
+        crop_cft_area_da, crop_cft_prod_da = _one_crop(
             case,
             case_ds,
-            cft_crop_array,
             i,
             crop,
             crop_cft_area_da,
@@ -39,11 +35,8 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     crop_cft_prod_da.attrs["units"] = "g"
 
     # Save cft_crop variable
-    case_ds["cft_crop"] = xr.DataArray(
-        data=cft_crop_array,
-        dims=["cft"],
-        coords={"cft": case_ds["cft"]},
-    ).astype(str)
+    cft_crop_da = get_cft_crop_da(crops_to_include, case, case_ds)
+    case_ds["cft_crop"] = cft_crop_da
 
     # Add crop_cft_* variables to case_ds
     case_ds["crop_cft_area"] = crop_cft_area_da
