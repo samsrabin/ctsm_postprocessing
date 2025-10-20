@@ -36,7 +36,7 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
         data=cft_crop_array,
         dims=["cft"],
         coords={"cft": case_ds["cft"]},
-    )
+    ).astype(str)
 
     # Add crop_cft_* variables to case_ds
     case_ds["crop_cft_area"] = crop_cft_area_da
