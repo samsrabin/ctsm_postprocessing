@@ -33,12 +33,43 @@ def da_circmean(da, dim=None, **kwargs):
     if "nan_policy" not in kwargs and np.issubdtype(da.dtype, np.floating):
         kwargs["nan_policy"] = "omit"
 
+    input_core_dims = [[dim]] if isinstance(dim, str) else [dim] if dim else [da.dims]
+
+    # Determine which dimensions will be excluded from the output
+    exclude_dims = set(input_core_dims[0]) if input_core_dims[0] else set()
+
+    # When reducing all dimensions, we need axis=None
+    # When reducing multiple dimensions, apply_ufunc moves them to the end,
+    # so we need to specify the appropriate axes
+    reduce_all_dims = len(exclude_dims) == len(da.dims)
+    num_core_dims = len(input_core_dims[0]) if input_core_dims[0] else 0
+
+    # Create a wrapper function that passes the appropriate axis to circmean
+    def _circmean_wrapper(data, **kw):
+        if reduce_all_dims:
+            return circmean(data, axis=None, **kw)
+
+        if num_core_dims == 1:
+            # Single dimension reduction
+            return circmean(data, axis=-1, **kw)
+
+        # Multiple dimension reduction - they're moved to the end by apply_ufunc
+        # So if we're reducing 2 dims, they'll be at positions -2 and -1
+        axes = tuple(range(-num_core_dims, 0))
+        return circmean(data, axis=axes, **kw)
+
+    # When reducing all dimensions, we don't need vectorize
+    # Otherwise, we need vectorize to handle the remaining dimensions
+    use_vectorize = not reduce_all_dims
+
     result = xr.apply_ufunc(
-        circmean,
+        _circmean_wrapper,
         da,
-        input_core_dims=[[dim]] if isinstance(dim, str) else [dim] if dim else [da.dims],
+        input_core_dims=input_core_dims,
+        exclude_dims=exclude_dims,
         kwargs=kwargs,
         keep_attrs=True,
+        vectorize=use_vectorize,
     )
     return result
 

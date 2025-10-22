@@ -79,7 +79,7 @@ class TestRoundToNearestDay(unittest.TestCase):
 
 class TestCircMean(unittest.TestCase):
     """
-    Class for testing da_circmean and its extensions
+    Class for testing da_circmean
     """
 
     def test_da_circmean_basic_0_360(self):
@@ -98,6 +98,82 @@ class TestCircMean(unittest.TestCase):
         da = xr.DataArray(data=np.array([1, 364]))
         result = da_circmean(da, low=1, high=366)
         self.assertEqual(result.values, 365)
+
+    def test_da_circmean_alldims(self):
+        """Test of da_circmean on a 2-d var across all dims"""
+        da = xr.DataArray(
+            data=np.array([[1, 3], [1, 3]]),
+            dims=["x", "y"],
+        )
+        result = da_circmean(da)
+        expected = xr.DataArray(data=np.array(2))
+        self.assertTrue(result.equals(expected))
+
+    def test_xarray_mean_1dim_of2(self):
+        """
+        Test xarray's mean on 2-d var across 1 dim, just to make sure the var is set up right
+        """
+        da = xr.DataArray(
+            data=np.array([[1, 3], [1, 3]]),
+            dims=["x", "y"],
+        )
+        result = da.mean(dim="y")
+        expected = xr.DataArray(data=np.array([2, 2]), dims=["x"])
+        self.assertTrue(result.equals(expected))
+
+    def test_da_circmean_1dimy_of2(self):
+        """
+        Test da_circmean on 2-d var across 1 dim, using same da/operation as test_xarray_mean_1dim
+        """
+        da = xr.DataArray(
+            data=np.array([[1, 3], [1, 3]]),
+            dims=["x", "y"],
+        )
+        result = da_circmean(da, dim="y")
+        expected = xr.DataArray(data=np.array([2, 2]), dims=["x"])
+        self.assertTrue(result.equals(expected))
+
+    def test_da_circmean_1dimx_of2(self):
+        """
+        Test da_circmean on 2-d var across 1 dim, using x dimension instead
+        """
+        da = xr.DataArray(
+            data=np.array([[1, 3], [1, 3]]),
+            dims=["x", "y"],
+        )
+        result = da_circmean(da, dim="x")
+        expected = xr.DataArray(data=np.array([1, 3]), dims=["y"])
+        self.assertTrue(result.equals(expected))
+
+    def test_da_circmean_1st2_of3(self):
+        """
+        Test da_circmean on 3-d var across first 2 dimensions
+        """
+        da = xr.DataArray(
+            data=np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]),
+            dims=["x", "y", "z"],
+        )
+        result = da_circmean(da, dim=["x", "y"], high=10)
+        expected = xr.DataArray(data=np.array([4, 5]), dims=["z"])
+        self.assertTrue(result.equals(expected))
+
+    def test_da_circmean_2nd2_of3(self):
+        """
+        Test da_circmean on 3-d var across second 2 dimensions
+        """
+        da = xr.DataArray(
+            data=np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]),
+            dims=["x", "y", "z"],
+        )
+        result = da_circmean(da, dim=["y", "z"], high=10)
+        expected = xr.DataArray(data=np.array([2.5, 6.5]), dims=["x"])
+        self.assertTrue(result.equals(expected))
+
+
+class TestCircMeanDoy(unittest.TestCase):
+    """
+    Class for testing da_circmean_doy
+    """
 
     def test_da_circmean_doy(self):
         """Test of da_circmean_doy"""
