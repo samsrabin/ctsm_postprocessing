@@ -238,3 +238,23 @@ class TestCircMeanDoy(unittest.TestCase):
         da = xr.DataArray(data=np.array([1, 365, 365]))
         result = da_circmean_doy(da)
         self.assertEqual(result.values, 365)
+
+    def test_da_circmean_doy_1dim_of2(self):
+        """Test of da_circmean_doy on just one dimension of 2"""
+        da = xr.DataArray(
+            data=np.array([[1, 364],[1, 364]]),
+            dims=["x", "time"],
+        )
+        result = da_circmean_doy(da, dim="time")
+        expected = xr.DataArray(data=np.array([365, 365]), dims=["x"])
+        self.assertTrue(result.equals(expected))
+
+    def test_da_circmean_doy_alldims(self):
+        """Test of da_circmean_doy across a 2-d array"""
+        da = xr.DataArray(
+            data=np.array([[1, 364],[1, 364]]),
+            dims=["x", "time"],
+        )
+        result = da_circmean_doy(da)
+        expected = xr.DataArray(data=np.array(365))
+        self.assertTrue(result.equals(expected))
