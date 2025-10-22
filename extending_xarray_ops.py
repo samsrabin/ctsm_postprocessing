@@ -2,6 +2,8 @@
 Functions to extend the kinds of operations you can do to an Xarray object
 """
 
+import warnings
+from scipy.stats._axis_nan_policy import SmallSampleWarning
 from scipy.stats import circmean
 import numpy as np
 import xarray as xr
@@ -117,7 +119,10 @@ def da_circmean_doy(da, dim=None, **kwargs):
     all_in_1_365 = np.all(((da.values >= 1) & (da.values <= DAYS_IN_YEAR)) | np.isnan(da.values))
     assert all_in_1_365, f"All input values should be in the range 1-{DAYS_IN_YEAR} or NaN"
 
-    result = da_circmean(da, dim=dim, low=low, high=high, **kwargs)
+    # Suppress SmallSampleWarning for this call (caused by all NaNs)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=SmallSampleWarning)
+        result = da_circmean(da, dim=dim, low=low, high=high, **kwargs)
 
     # Round to nearest day
     result = xr.apply_ufunc(_round_to_nearest_day, result, vectorize=True)

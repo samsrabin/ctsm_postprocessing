@@ -5,6 +5,8 @@ Module to unit-test extending_xarray_ops.py
 import sys
 import os
 import unittest
+import warnings
+from scipy.stats._axis_nan_policy import SmallSampleWarning
 from scipy.stats import circmean
 import numpy as np
 import xarray as xr
@@ -87,6 +89,19 @@ class TestCircMean(unittest.TestCase):
         da = xr.DataArray(data=np.pi * np.array([1.9, 2.1]))
         result = da_circmean(da)
         self.assertAlmostEqual(result.values, 2 * np.pi)
+
+    def test_da_circmean_allnan(self):
+        """
+        Basic test of da_circmean on an all-nan vector. If it doesn't raise a warning, the warning
+        suppression code can be removed from da_circmean_doy().
+        """
+        da = xr.DataArray(data=np.array([np.nan, np.nan]))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = da_circmean(da)
+            # Check that SmallSampleWarning was raised
+            self.assertTrue(any(issubclass(warning.category, SmallSampleWarning) for warning in w))
+        self.assertTrue(np.isnan(result.values))
 
     def test_circmean_365day(self):
         """Test of scipy's circmean using range for days of a 365-day year"""
@@ -248,19 +263,38 @@ class TestCircMeanDoy(unittest.TestCase):
     def test_da_circmean_doy_1dim_of2(self):
         """Test of da_circmean_doy on just one dimension of 2"""
         da = xr.DataArray(
-            data=np.array([[1, 364],[1, 364]]),
+            data=np.array([[1, 364], [1, 364]]),
             dims=["x", "time"],
         )
         result = da_circmean_doy(da, dim="time")
         expected = xr.DataArray(data=np.array([365, 365]), dims=["x"])
         self.assertTrue(result.equals(expected))
 
+    def test_da_circmean_doy_1dim_of2_allnan(self):
+        """Test of da_circmean_doy on just one dimension of 2 with all NaNs; expect no warnings"""
+        da = xr.DataArray(
+            data=np.array([[np.nan, np.nan], [np.nan, np.nan]]),
+            dims=["x", "time"],
+        )
+        result = da_circmean_doy(da, dim="time")
+        expected = xr.DataArray(data=np.array([np.nan, np.nan]), dims=["x"])
+        self.assertTrue(result.equals(expected))
+
     def test_da_circmean_doy_alldims(self):
         """Test of da_circmean_doy across a 2-d array"""
         da = xr.DataArray(
-            data=np.array([[1, 364],[1, 364]]),
+            data=np.array([[1, 364], [1, 364]]),
             dims=["x", "time"],
         )
-        result = da_circmean_doy(da)
+
+        with warnings.catch_warnings(record=True) as w:
+            # Ensure all warnings are treated as errors within this context
+            warnings.simplefilter("error")
+            try:
+                result = da_circmean_doy(da)
+            except Warning as e:
+                self.fail(f"Unexpected warning raised: {e}")
+            self.assertEqual(len(w), 0, "No warnings should have been recorded.")
+
         expected = xr.DataArray(data=np.array(365))
         self.assertTrue(result.equals(expected))
