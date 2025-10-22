@@ -112,6 +112,8 @@ def da_circmean_doy(da, dim=None, **kwargs):
     assert all_nearly_integers, "All input values should be whole numbers or NaN"
 
     # This function assumes that all values are in the range 1-365.
+    # -1 is used by CTSM for "no sowing"/"no harvest", so allow that (convert to NaN)
+    da = da.where(da != -1.0)
     all_in_1_365 = np.all(((da.values >= 1) & (da.values <= DAYS_IN_YEAR)) | np.isnan(da.values))
     assert all_in_1_365, f"All input values should be in the range 1-{DAYS_IN_YEAR} or NaN"
 

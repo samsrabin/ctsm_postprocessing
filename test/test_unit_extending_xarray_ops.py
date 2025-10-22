@@ -187,6 +187,12 @@ class TestCircMeanDoy(unittest.TestCase):
         result = da_circmean_doy(da)
         self.assertEqual(result.values, 365)
 
+    def test_da_circmean_doy_neg1(self):
+        """Test of da_circmean_doy with a -1, which should get converted to NaN"""
+        da = xr.DataArray(data=np.array([1.0, 364.0, -1.0]))
+        result = da_circmean_doy(da)
+        self.assertEqual(result.values, 365)
+
     def test_da_circmean_doy_nan_propagate(self):
         """Test of da_circmean_doy with a propagating NaN"""
         da = xr.DataArray(data=np.array([1.0, 364.0, np.nan]))
