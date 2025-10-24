@@ -682,7 +682,7 @@ def import_ds(
             chunks=chunks,
         )
     elif isinstance(filelist, str):
-        this_ds = xr.open_dataset(filelist, chunks=chunks)
+        this_ds = xr.open_dataset(filelist, chunks=chunks, decode_timedelta=False)
         this_ds = mfdataset_preproc(this_ds, myVars, myVegtypes, timeSlice)
         this_ds = this_ds.compute()
 
