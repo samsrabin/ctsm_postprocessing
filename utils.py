@@ -764,6 +764,9 @@ def grid_one_variable(this_ds, thisVar, fillValue=None, **kwargs):
     ixy_da = get_thisVar_da(xy_1d_prefix + "1d_ixy", this_ds)
     jxy_da = get_thisVar_da(xy_1d_prefix + "1d_jxy", this_ds)
 
+    ixy_da = ixy_da - ixy_da.min() + 1
+    jxy_da = jxy_da - jxy_da.min() + 1
+
     if not fillValue and "_FillValue" in thisvar_da.attrs:
         fillValue = thisvar_da.attrs["_FillValue"]
 
