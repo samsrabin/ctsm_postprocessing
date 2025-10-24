@@ -36,6 +36,7 @@ except ImportError:
     from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
 CFT_DS_FILENAME = "cft_ds.nc"
+CFT_DS_CHUNKING = {"cft": 1, "crop": 1}
 
 
 def _mf_preproc(ds):
@@ -171,9 +172,7 @@ class CropCase:
                 end_file_year = None
             else:
                 if not user_has_write_perms and not force_no_cft_ds_file:
-                    print(
-                        f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
-                    )
+                    print(f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
                 start_file_year = start_year
                 end_file_year = end_year
             msg = f"Making {CFT_DS_FILENAME}"
@@ -200,12 +199,16 @@ class CropCase:
             # Always prefer to read from the file, to ensure consistency of performance
             self.cft_ds = None
             start = time()
-            self.cft_ds = xr.open_dataset(self.cft_ds_file, decode_timedelta=False)
+            self.cft_ds = xr.open_dataset(
+                self.cft_ds_file,
+                decode_timedelta=False,
+                chunks=CFT_DS_CHUNKING,
+                chunked_array_type="dask",
+            )
             start_date = f"{start_year}-01-01"
             end_date = f"{end_year}-12-31"
             time_slice = slice(start_date, end_date)
             self.cft_ds = self.cft_ds.sel(time=time_slice)
-            self.cft_ds.load()
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
@@ -241,7 +244,7 @@ class CropCase:
         cft_ds = self._get_cft_ds(crops_to_include, ds)
 
         # Chunk
-        cft_ds = cft_ds.chunk(chunks={"cft": 1, "crop": 1})
+        cft_ds = cft_ds.chunk(chunks=CFT_DS_CHUNKING)
 
         return cft_ds
 
