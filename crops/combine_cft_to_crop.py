@@ -153,6 +153,11 @@ def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
     AttributeError
         If the specified method cannot be found or is not callable
     """
+    # Explicitly load the grouping coordinate to avoid deprecation warning
+    # This is required for xarray v2025.05.0+
+    if hasattr(ds["cft_crop"].data, "compute"):
+        ds["cft_crop"] = ds["cft_crop"].compute()
+
     da_grouped = ds[var_in].groupby(ds["cft_crop"])
 
     # First, see if you can call the given method directly
