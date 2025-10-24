@@ -23,7 +23,7 @@ class Timing:
         if verbose:
             print(f"{what} took {end - self._start} s")
 
-    def end_all(self, what, verbose):
+    def end_all(self, what, verbose=True):
         """
         End timer across all loops
         """
