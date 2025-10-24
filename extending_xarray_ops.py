@@ -129,7 +129,6 @@ def da_circmean_doy(da, dim=None, **kwargs):
 
     # Check that we ended up with integers (or close enough)
     all_nearly_integers = np.allclose(result.values, np.round(result.values), equal_nan=True)
-    print(result.values)
     assert all_nearly_integers, "Not all output values are whole numbers or NaN"
 
     return result
