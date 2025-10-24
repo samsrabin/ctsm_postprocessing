@@ -130,6 +130,7 @@ class CropCase:
         force_new_cft_ds_file=False,
         force_no_cft_ds_file=False,
         cft_ds_dir=None,
+        this_h_tape=None,
     ):
         # pylint: disable=too-many-positional-arguments
         """
@@ -185,6 +186,7 @@ class CropCase:
                 n_pfts,
                 start_file_year,
                 end_file_year,
+                this_h_tape,
             )
             if save_netcdf:
                 if self.verbose:
@@ -213,12 +215,12 @@ class CropCase:
             print(f"Opening cft_ds took {int(end - start)} s")
 
     def _read_and_process_files(
-        self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year
+        self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
     ):
         """
         Read all history files and create the "CFT dataset"
         """
-        self._get_file_list(start_year, end_year)
+        self._get_file_list(start_year, end_year, this_h_tape)
 
         # Read files
         # Adding join="override", compat="override", coords="minimal", doesn't fix the graph size
@@ -248,12 +250,13 @@ class CropCase:
 
         return cft_ds
 
-    def _get_file_list(self, start_year, end_year):
+    def _get_file_list(self, start_year, end_year, this_h_tape):
         """
         Get the files to import
         """
         # Get the tape we need to import (h0i, h2a, etc.)
-        this_h_tape = _get_crop_tape(self.file_dir, self.name)
+        if this_h_tape is None:
+            this_h_tape = _get_crop_tape(self.file_dir, self.name)
         # Get list of all files
         file_pattern = os.path.join(self.file_dir, self.name + ".clm2." + this_h_tape + ".*.nc")
         file_list = np.sort(glob.glob(file_pattern))
