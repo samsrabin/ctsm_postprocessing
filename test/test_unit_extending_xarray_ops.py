@@ -20,6 +20,20 @@ except ImportError:
     from extending_xarray_ops import da_circmean, da_circmean_doy, _round_to_nearest_day
 
 
+def da_equals_round(da0, da1, tol_decimals=14):
+    """
+    Check whether two DataArrays are equal within some tolerance
+    """
+    da0 = da0.round(decimals=tol_decimals)
+    da1 = da1.round(decimals=tol_decimals)
+    result = da0.equals(da1)
+    if not result:
+        print(f"da0: {da0}")
+        print(f"da1: {da1}")
+        print(f"diff: {da1 - da0}")
+    return result
+
+
 class TestRoundToNearestDay(unittest.TestCase):
     """
     Class for testing _round_to_nearest_day()
@@ -122,7 +136,7 @@ class TestCircMean(unittest.TestCase):
         )
         result = da_circmean(da)
         expected = xr.DataArray(data=np.array(2))
-        self.assertTrue(result.equals(expected))
+        self.assertTrue(da_equals_round(result, expected))
 
     def test_xarray_mean_1dim_of2(self):
         """
@@ -146,7 +160,7 @@ class TestCircMean(unittest.TestCase):
         )
         result = da_circmean(da, dim="y")
         expected = xr.DataArray(data=np.array([2, 2]), dims=["x"])
-        self.assertTrue(result.equals(expected))
+        self.assertTrue(da_equals_round(result, expected))
 
     def test_da_circmean_1dimx_of2(self):
         """
@@ -158,7 +172,7 @@ class TestCircMean(unittest.TestCase):
         )
         result = da_circmean(da, dim="x")
         expected = xr.DataArray(data=np.array([1, 3]), dims=["y"])
-        self.assertTrue(result.equals(expected))
+        self.assertTrue(da_equals_round(result, expected))
 
     def test_da_circmean_1st2_of3(self):
         """
@@ -170,7 +184,7 @@ class TestCircMean(unittest.TestCase):
         )
         result = da_circmean(da, dim=["x", "y"], high=10)
         expected = xr.DataArray(data=np.array([4, 5]), dims=["z"])
-        self.assertTrue(result.equals(expected))
+        self.assertTrue(da_equals_round(result, expected))
 
     def test_da_circmean_2nd2_of3(self):
         """
@@ -182,7 +196,7 @@ class TestCircMean(unittest.TestCase):
         )
         result = da_circmean(da, dim=["y", "z"], high=10)
         expected = xr.DataArray(data=np.array([2.5, 6.5]), dims=["x"])
-        self.assertTrue(result.equals(expected))
+        self.assertTrue(da_equals_round(result, expected))
 
 
 class TestCircMeanDoy(unittest.TestCase):
