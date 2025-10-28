@@ -214,6 +214,11 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
+        # cft_crop is often a groupby() variable, so computing it makes things more efficient.
+        # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
+        if hasattr(self.cft_ds["cft_crop"].data, "compute"):
+            self.cft_ds["cft_crop"] = self.cft_ds["cft_crop"].compute()
+
     def _read_and_process_files(
         self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
     ):

@@ -33,6 +33,11 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     cft_crop_da = get_cft_crop_da(crops_to_include, case, case_ds)
     case_ds["cft_crop"] = cft_crop_da
 
+    # cft_crop is often a groupby() variable, so computing it makes things more efficient.
+    # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
+    if hasattr(case_ds["cft_crop"].data, "compute"):
+        case_ds["cft_crop"] = case_ds["cft_crop"].compute()
+
     # Add crop_cft_* variables to case_ds
     case_ds["crop_cft_area"] = crop_cft_area_da
     case_ds["crop_cft_prod"] = crop_cft_prod_da
