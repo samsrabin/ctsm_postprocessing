@@ -59,45 +59,26 @@ def test_handle_huifrac_where_gddharv_negative_but_nan_huifrac():
     assert np.array_equal(huifrac_out, huifrac_target, equal_nan=True)
 
 
-def test_get_huifrac():
+@pytest.mark.parametrize(
+    "hui_in, gddharv_in, target_in",
+    [
+        (3, 12, 0.25),
+        (-3, -12, np.nan),  # Both negative? Should be masked in result.
+        (3, 0, 1),  # GDDHARV zero? huifrac should be 1.
+    ],
+)
+def test_get_huifrac(hui_in, gddharv_in, target_in):
     """
     Test get_huifrac()
     """
     hui_da = xr.DataArray(
-        data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
+        data=np.array([[1, 2, hui_in, 4], [5, 6, 7, 8]]),
     )
     gddharv_da = xr.DataArray(
-        data=np.array([[1, 4, 12, 4], [25, 6, 7, 8]]),
+        data=np.array([[1, 4, gddharv_in, 4], [25, 6, 7, 8]]),
     )
     target_da = xr.DataArray(
-        data=np.array([[1, 0.5, 0.25, 1], [0.2, 1, 1, 1]]),
-        attrs={"units": "Fraction of required"},
-    )
-    hui_var = c2o.DEFAULT_VAR_DICT["hui_var"]
-    gddharv_var = c2o.DEFAULT_VAR_DICT["gddharv_var"]
-    ds = xr.Dataset(
-        data_vars={
-            hui_var: hui_da,
-            gddharv_var: gddharv_da,
-        }
-    )
-
-    da_out = c2o.get_huifrac(ds)
-    assert da_out.equals(target_da)
-
-
-def test_get_huifrac_bothneg():
-    """
-    Test get_huifrac() with HUI and GDDHARV both negative
-    """
-    hui_da = xr.DataArray(
-        data=np.array([[1, 2, -3, 4], [5, 6, 7, 8]]),
-    )
-    gddharv_da = xr.DataArray(
-        data=np.array([[1, 4, -12, 4], [25, 6, 7, 8]]),
-    )
-    target_da = xr.DataArray(
-        data=np.array([[1, 0.5, np.nan, 1], [0.2, 1, 1, 1]]),
+        data=np.array([[1, 0.5, target_in, 1], [0.2, 1, 1, 1]]),
         attrs={"units": "Fraction of required"},
     )
     hui_var = c2o.DEFAULT_VAR_DICT["hui_var"]
@@ -144,32 +125,6 @@ def test_get_huifrac_customnames():
     assert da_out.equals(target_da)
 
 
-def test_get_huifrac_gddharv0():
-    """
-    Test that get_huifrac() correctly handles GDDHARV 0
-    """
-    hui_da = xr.DataArray(
-        data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
-    )
-    gddharv_da = xr.DataArray(
-        data=np.array([[1, 4, 0, 4], [25, 6, 7, 8]]),
-    )
-    target_da = xr.DataArray(
-        data=np.array([[1, 0.5, 1, 1], [0.2, 1, 1, 1]]), attrs={"units": "Fraction of required"}
-    )
-    hui_var = c2o.DEFAULT_VAR_DICT["hui_var"]
-    gddharv_var = c2o.DEFAULT_VAR_DICT["gddharv_var"]
-    ds = xr.Dataset(
-        data_vars={
-            hui_var: hui_da,
-            gddharv_var: gddharv_da,
-        }
-    )
-
-    da_out = c2o.get_huifrac(ds)
-    assert da_out.equals(target_da)
-
-
 def test_get_huifrac_preserves_metadata():
     """
     Test that get_huifrac() preserves metadata
@@ -212,59 +167,26 @@ def test_get_huifrac_preserves_metadata():
     da_out = c2o.get_huifrac(ds)
     assert da_out.equals(target_da)
 
-
-def test_calendar_has_leapdays_no():
+@pytest.mark.parametrize(
+    "data, dims, expected",
+    [
+        ([cftime.DatetimeNoLeap(1, 1, 1)], ["time"], False),
+        ([cftime.DatetimeGregorian(1987, 1, 1)], ["time"], True),
+        ([cftime.DatetimeGregorian(1987, 1, 1)], None, False),  # False if time not in dims
+        ([], ["time"], False),  # False if time is empty
+        ([1987], ["time"], False),  # False if time is a plain numpy type
+    ],
+)
+def test_calendar_has_leapdays(data, dims, expected):
     """
-    Test that _calendar_has_leapdays() returns False if calendar has no leap days
-    """
-    da = xr.DataArray(
-        data=np.array([cftime.DatetimeNoLeap(1, 1, 1)]),
-        dims=["time"],
-    )
-    assert not c2o._calendar_has_leapdays(da)
-
-
-def test_calendar_has_leapdays_yes():
-    """
-    Test that _calendar_has_leapdays() returns True if calendar has leap days
+    Test _calendar_has_leapdays()
     """
     da = xr.DataArray(
-        data=[cftime.DatetimeGregorian(1987, 1, 1)],
-        dims=["time"],
+        data=np.array(data),
+        dims=dims,
     )
-    assert c2o._calendar_has_leapdays(da)
-
-
-def test_calendar_has_leapdays_false_notime():
-    """
-    Test that _calendar_has_leapdays() returns False if time not in dims
-    """
-    da = xr.DataArray(
-        data=[cftime.DatetimeGregorian(1987, 1, 1)],
-    )
-    assert not c2o._calendar_has_leapdays(da)
-
-
-def test_calendar_has_leapdays_false_emptytime():
-    """
-    Test that _calendar_has_leapdays() returns False if time is empty
-    """
-    da = xr.DataArray(
-        data=[],
-        dims=["time"],
-    )
-    assert not c2o._calendar_has_leapdays(da)
-
-
-def test_calendar_has_leapdays_false_numpy():
-    """
-    Test that _calendar_has_leapdays() returns False if time is a plain numpy type
-    """
-    da = xr.DataArray(
-        data=[1987],
-        dims=["time"],
-    )
-    assert not c2o._calendar_has_leapdays(da)
+    result = c2o._calendar_has_leapdays(da)
+    assert result == expected
 
 
 def test_get_gslen_within1year():
