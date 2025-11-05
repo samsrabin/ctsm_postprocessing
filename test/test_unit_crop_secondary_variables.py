@@ -218,39 +218,65 @@ def test_calendar_has_leapdays(data, dims, expected):
     assert result == expected
 
 
-def test_get_gslen_within1year():
+@st.composite
+def sdate_hdate_pairs_sameyear(draw):
+    """Generate valid pairs of sdate and hdate within the same year"""
+    sdate = draw(st.floats(min_value=1, max_value=365))
+    hdate = draw(st.floats(min_value=sdate, max_value=365))
+
+    return sdate, hdate
+
+
+@given(sdate_hdate_pairs_sameyear())
+def test_get_gslen_within1year(sdate_hdate_pair):
     """
     Check that get_gslen() correctly calculates growing season length when both dates are in the
     same calendar year
     """
-    sdates_da = xr.DataArray(data=np.array([15]))
-    hdates_da = xr.DataArray(data=np.array([17]))
+    sdate, hdate = sdate_hdate_pair
+    target = hdate - sdate
+
+    sdates_da = xr.DataArray(data=np.array([sdate]))
+    hdates_da = xr.DataArray(data=np.array([hdate]))
     ds = xr.Dataset(
         data_vars={
             "HDATES": hdates_da,
             "SDATES_PERHARV": sdates_da,
         }
     )
-    target_da = xr.DataArray(data=np.array([2]))
+    target_da = xr.DataArray(data=np.array([target]))
 
     da_out = c2o.get_gslen(ds)
     assert da_out.equals(target_da)
 
 
-def test_get_gslen_differentyears():
+@st.composite
+def sdate_hdate_pairs_diffyear(draw):
+    """Generate valid pairs of sdate and hdate with hdate in the next year"""
+    sdate = draw(st.floats(min_value=1, max_value=365, exclude_min=True))
+    hdate = draw(st.floats(min_value=1, max_value=sdate, exclude_max=True))
+
+    return sdate, hdate
+
+
+@given(sdate_hdate_pairs_diffyear())
+def test_get_gslen_differentyears(sdate_hdate_pair):
     """
     Check that get_gslen() correctly calculates growing season length when dates are in
     different calendar years
     """
-    sdates_da = xr.DataArray(data=np.array([364]))
-    hdates_da = xr.DataArray(data=np.array([1]))
+    sdate, hdate = sdate_hdate_pair
+    target = hdate - sdate + 365
+
+    sdates_da = xr.DataArray(data=np.array([sdate]))
+    hdates_da = xr.DataArray(data=np.array([hdate]))
     ds = xr.Dataset(
         data_vars={
             "HDATES": hdates_da,
             "SDATES_PERHARV": sdates_da,
         }
     )
-    target_da = xr.DataArray(data=np.array([2]))
+    target_da = xr.DataArray(data=np.array([target]))
 
     da_out = c2o.get_gslen(ds)
     assert da_out.equals(target_da)
