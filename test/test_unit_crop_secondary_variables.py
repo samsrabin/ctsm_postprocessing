@@ -61,17 +61,31 @@ def test_handle_huifrac_where_gddharv_negative_but_nan_huifrac():
     assert np.array_equal(huifrac_out, huifrac_target, equal_nan=True)
 
 
-@given(hui_in=st.floats(), gddharv_in=st.floats())
-@example(hui_in=3, gddharv_in=12)  # Normal case: 3/12 = 0.25
-@example(hui_in=-3, gddharv_in=-12)  # Both negative: should be NaN
-@example(hui_in=3, gddharv_in=0)  # GDDHARV zero: huifrac should be 1
-def test_get_huifrac(hui_in, gddharv_in):
+@st.composite
+def hui_gddharv_pairs(draw):
+    """Generate valid pairs of hui_in and gddharv_in values"""
+    hui_in = draw(st.floats())
+
+    if hui_in >= 0:
+        # If hui_in is non-negative, gddharv_in must also be non-negative
+        # Otherwise NotImplementedError in _handle_huifrac_where_gddharv_notpos()
+        gddharv_in = draw(st.floats(min_value=0))
+    else:
+        # Otherwise, gddharv_in can be any value
+        gddharv_in = draw(st.floats())
+
+    return hui_in, gddharv_in
+
+
+@given(hui_gddharv_pairs())
+@example((3, 12))  # Normal case: 3/12 = 0.25
+@example((-3, -12))  # Both negative: should be NaN
+@example((3, 0))  # GDDHARV zero: huifrac should be 1
+def test_get_huifrac(hui_gddharv):
     """
     Test get_huifrac() using property-based testing
     """
-
-    # Not implemented
-    assume(gddharv_in >= 0 if hui_in >= 0 else True)
+    hui_in, gddharv_in = hui_gddharv
 
     hui_da = xr.DataArray(
         data=np.array([[1, 2, hui_in, 4], [5, 6, 7, 8]]),
