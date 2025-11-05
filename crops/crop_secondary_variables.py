@@ -111,12 +111,7 @@ def get_gslen(ds):
     if np.any(da_sdates == 366):
         raise NotImplementedError(f"Unexpected {var_sdates} value(s) == 366 suggesting leap days")
 
-    da_gslen = da_hdates - da_sdates
-
-    # Handle seasons that crossed over Jan. 1
-    tmp = da_gslen.values
-    tmp[tmp < 0] = 365 + tmp[tmp < 0]
-    da_gslen.values = tmp
+    da_gslen = (da_hdates - da_sdates) % 365
 
     da_gslen.attrs["units"] = "days"
     return da_gslen
