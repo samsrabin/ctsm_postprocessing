@@ -19,6 +19,7 @@ def _handle_huifrac_where_gddharv_notpos(da_huifrac, da_gddharv):
     # Error if any GDDHARV value is negative for non-NaN HUIFRAC
     if np.any((da_gddharv < 0) & ~np.isnan(da_huifrac)):
         raise NotImplementedError("How should negative GDDHARV affect HUIFRAC?")
+    # TODO: Should there be an error for vice versa?
 
     huifrac = da_huifrac.values
 

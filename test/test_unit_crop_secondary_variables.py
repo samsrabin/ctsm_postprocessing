@@ -9,6 +9,8 @@ import numpy as np
 import xarray as xr
 import cftime
 
+from hypothesis import assume, given, example, strategies as st
+
 try:
     # Attempt relative import if running as part of a package
     from ..crops import crop_secondary_variables as c2o
@@ -59,28 +61,40 @@ def test_handle_huifrac_where_gddharv_negative_but_nan_huifrac():
     assert np.array_equal(huifrac_out, huifrac_target, equal_nan=True)
 
 
-@pytest.mark.parametrize(
-    "hui_in, gddharv_in, target_in",
-    [
-        (3, 12, 0.25),
-        (-3, -12, np.nan),  # Both negative? Should be masked in result.
-        (3, 0, 1),  # GDDHARV zero? huifrac should be 1.
-    ],
-)
-def test_get_huifrac(hui_in, gddharv_in, target_in):
+@given(hui_in=st.floats(), gddharv_in=st.floats())
+@example(hui_in=3, gddharv_in=12)  # Normal case: 3/12 = 0.25
+@example(hui_in=-3, gddharv_in=-12)  # Both negative: should be NaN
+@example(hui_in=3, gddharv_in=0)  # GDDHARV zero: huifrac should be 1
+def test_get_huifrac(hui_in, gddharv_in):
     """
-    Test get_huifrac()
+    Test get_huifrac() using property-based testing
     """
+
+    # Not implemented
+    assume(gddharv_in >= 0 if hui_in >= 0 else True)
+
     hui_da = xr.DataArray(
         data=np.array([[1, 2, hui_in, 4], [5, 6, 7, 8]]),
     )
     gddharv_da = xr.DataArray(
         data=np.array([[1, 4, gddharv_in, 4], [25, 6, 7, 8]]),
     )
+
+    # Calculate expected value
+    if gddharv_in == 0:
+        # Special handling in _handle_huifrac_where_gddharv_notpos()
+        target_in = 1
+    elif hui_in < 0 and gddharv_in < 0:
+        # Special handling in get_huifrac()
+        target_in = np.nan
+    else:
+        target_in = hui_in / gddharv_in
+
     target_da = xr.DataArray(
         data=np.array([[1, 0.5, target_in, 1], [0.2, 1, 1, 1]]),
         attrs={"units": "Fraction of required"},
     )
+
     hui_var = c2o.DEFAULT_VAR_DICT["hui_var"]
     gddharv_var = c2o.DEFAULT_VAR_DICT["gddharv_var"]
     ds = xr.Dataset(
@@ -166,6 +180,7 @@ def test_get_huifrac_preserves_metadata():
 
     da_out = c2o.get_huifrac(ds)
     assert da_out.equals(target_da)
+
 
 @pytest.mark.parametrize(
     "data, dims, expected",
