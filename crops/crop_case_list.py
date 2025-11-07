@@ -50,8 +50,15 @@ class CropCaseList(list):
 
         # Check that all attributes match
         for attr in [a for a in dir(self) if not a.startswith("__")]:
+            # Skip callable attributes (methods)
+            if callable(getattr(self, attr)):
+                continue
+            if not hasattr(other, attr):
+                return False
             try:
-                if not getattr(self, attr) == getattr(other, attr):
+                value_self = getattr(self, attr)
+                value_other = getattr(other, attr)
+                if not value_self == value_other:
                     return False
             except:  # pylint: disable=bare-except
                 return False
@@ -61,7 +68,12 @@ class CropCaseList(list):
         assert isinstance(self_purelist, list)
         assert not isinstance(self_purelist, CropCaseList)
         other_purelist = list(other)
-        return self_purelist == other_purelist
+        if self_purelist != other_purelist:
+            return False
+        return True
+
+    def __ne__(self, other):
+        return not self == other
 
     def _import_cases(
         self,

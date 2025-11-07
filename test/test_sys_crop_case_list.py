@@ -7,6 +7,7 @@ Module to unit-test CropCaseList
 
 import sys
 import os
+import copy
 
 try:
     # Attempt relative import if running as part of a package
@@ -44,11 +45,37 @@ def test_setup_cropcaselist():
     """
     Make sure that CropCaseList does not error when importing test data
     """
-
-    # Define options
-    opts = DEFAULT_OPTS
-
-    this_case_list = CropCaseList(opts=opts)
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
 
     # Perform a bunch of checks
     check_crujra_matreqs_case_shared(this_case_list[0])
+
+
+def test_cropcaselist_equality():
+    """
+    Basic checks of CropCaseList.__eq__() and __ne__()
+    """
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+
+    # Check that equality works when called on a deep copy of itself...
+    this_case_list_copy = copy.deepcopy(this_case_list)
+    assert this_case_list == this_case_list_copy
+    # ... but not after changing something
+    this_case_list_copy.names = ["82nr924nd", "jif8eh598h"]
+    assert this_case_list != this_case_list_copy
+
+
+def test_cropcaselist_sel_nothing():
+    """
+    Make sure that CropCaseList.sel() with no (kw)args returns an exact copy
+    """
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    assert this_case_list == this_case_list.sel()
+
+
+def test_cropcaselist_isel_nothing():
+    """
+    Make sure that CropCaseList.isel() with no (kw)args returns an exact copy
+    """
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    assert this_case_list == this_case_list.isel()
