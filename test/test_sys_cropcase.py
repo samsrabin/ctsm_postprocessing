@@ -115,6 +115,7 @@ def test_setup_cropcase(tmp_path):
     this_case_copy.name = "82nr924nd"
     assert this_case != this_case_copy
 
+
 def test_setup_cropcase_noperms(tmp_path):
     """
     Make sure that CropCase doesn't try to save file if user doesn't have write perms
@@ -203,3 +204,133 @@ def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
             force_new_cft_ds_file=True,
             force_no_cft_ds_file=True,
         )
+
+
+def test_cropcase_equality(tmp_path):
+    """
+    Basic checks of CropCase.__eq__ and __ne__
+    """
+    # Import
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+
+    # Check that changing cft_ds causes inequality
+    copy_case = copy.deepcopy(this_case)
+    assert this_case == copy_case
+    copy_case.cft_ds = copy_case.cft_ds.isel(crop=0)
+    assert this_case != copy_case
+
+    # Check that changing an attribute causes inequality
+    copy_case = copy.deepcopy(this_case)
+    copy_case.name = "wiefnweurej"
+    assert this_case != copy_case
+
+
+def test_cropcase_sel_nothing(tmp_path):
+    """
+    Make sure that CropCase.sel() with no (kw)args returns an exact copy
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+    assert this_case == this_case.sel()
+
+
+def test_cropcase_sel_cotton(tmp_path):
+    """
+    Test CropCase.sel() with a selection
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+    this_dim = "crop"
+    sel_crop = "cotton"
+    this_case_sel = this_case.sel({this_dim: sel_crop})
+
+    # Check that sel() got rid of crop dimension
+    assert this_dim in this_case.cft_ds.dims
+    assert this_dim not in this_case_sel.cft_ds.dims
+
+    # Check that sel() got rid of all but one crop
+    assert this_case.cft_ds.sizes[this_dim] > 1
+    assert this_case_sel.cft_ds[this_dim].values == sel_crop
+
+    # Check that cft_ds objects differ
+    assert not this_case.cft_ds.equals(this_case_sel.cft_ds)
+
+    # Check == and != on result
+    assert not this_case == this_case_sel
+    assert this_case != this_case_sel
+
+
+def test_cropcase_isel_nothing(tmp_path):
+    """
+    Make sure that CropCase.isel() with no (kw)args returns an exact copy
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+    assert this_case == this_case.isel()
+
+
+def test_cropcaselist_isel_one_timestep(tmp_path):
+    """
+    Test CropCaseList.isel() with a selection
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+    this_dim = "time"
+    isel_timestep = 2
+    this_case_isel = this_case.isel({this_dim: isel_timestep})
+
+    # Check that sel() got rid of time dimension
+    assert this_dim in this_case.cft_ds.dims
+    assert this_dim not in this_case_isel.cft_ds.dims
+
+    # Check that sel() got rid of all but one timestep
+    assert this_case.cft_ds.sizes[this_dim] > 1
+    assert this_case_isel.cft_ds[this_dim].size == 1
+
+    # Check that cft_ds objects differ
+    assert not this_case.cft_ds.equals(this_case_isel.cft_ds)
+
+    # Check == and != on result
+    assert not this_case == this_case_isel
+    assert this_case != this_case_isel

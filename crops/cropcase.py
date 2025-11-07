@@ -234,11 +234,18 @@ class CropCase:
             try:
                 value_self = getattr(self, attr)
                 value_other = getattr(other, attr)
+                if not isinstance(value_other, type(value_self)):
+                    return False
+                if isinstance(value_self, xr.Dataset) and not value_self.equals(value_other):
+                    return False
                 if not value_self == value_other:
                     return False
             except:  # pylint: disable=bare-except
                 return False
         return True
+
+    def __ne__(self, other):
+        return not self == other
 
     def _read_and_process_files(
         self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
@@ -425,3 +432,51 @@ class CropCase:
                 },
             )
             cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests")
+
+    @classmethod
+    def _create_empty(cls):
+        """
+        Create an empty CropCase without going through the normal initialization (i.e., import).
+        Used internally by sel() and isel() for creating copies.
+        """
+        # Create instance without calling __init__
+        instance = cls.__new__(cls)
+        return instance
+
+    def _copy_other_attributes(self, dest_case_list):
+        """
+        Copy all CropCase attributes from self to destination CropCase, skipping cft_ds.
+        """
+        for attr in [a for a in dir(self) if not a.startswith("__")]:
+            if attr == "cft_ds":
+                continue
+            setattr(dest_case_list, attr, getattr(self, attr))
+        return dest_case_list
+
+    def sel(self, *args, **kwargs):
+        """
+        Makes a copy of CropCase with cft_ds having had Dataset.sel() applied with given arguments.
+        """
+        new_case = self._create_empty()
+
+        # .sel() from cft_ds
+        new_case.cft_ds = self.cft_ds.sel(*args, **kwargs)
+
+        # Copy over other attributes
+        new_case = self._copy_other_attributes(new_case)
+
+        return new_case
+
+    def isel(self, *args, **kwargs):
+        """
+        Makes a copy of CropCase with cft_ds having had Dataset.isel() applied with given arguments.
+        """
+        new_case = self._create_empty()
+
+        # .isel() from cft_ds
+        new_case.cft_ds = self.cft_ds.isel(*args, **kwargs)
+
+        # Copy over other attributes
+        new_case = self._copy_other_attributes(new_case)
+
+        return new_case

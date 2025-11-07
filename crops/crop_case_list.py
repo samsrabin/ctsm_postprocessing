@@ -43,12 +43,7 @@ class CropCaseList(list):
         )
         self.resolutions = {case.cft_ds.attrs["resolution"] for case in self}
 
-    def __eq__(self, other):
-        # Check that they're both CropCaseLists
-        if not isinstance(other, self.__class__):
-            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
-
-        # Check that all attributes match
+    def _check_attrs_match(self, other):
         for attr in [a for a in dir(self) if not a.startswith("__")]:
             # Skip callable attributes (methods)
             if callable(getattr(self, attr)):
@@ -58,18 +53,30 @@ class CropCaseList(list):
             try:
                 value_self = getattr(self, attr)
                 value_other = getattr(other, attr)
+                if not isinstance(value_other, type(value_self)):
+                    return False
                 if not value_self == value_other:
                     return False
             except:  # pylint: disable=bare-except
                 return False
+        return True
+
+    def __eq__(self, other):
+        # Check that they're both CropCaseLists
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+
+        # Check that all attributes match
+        if not self._check_attrs_match(other):
+            return False
 
         # Check that all cases match
-        self_purelist = list(self)
-        assert isinstance(self_purelist, list)
-        assert not isinstance(self_purelist, CropCaseList)
-        other_purelist = list(other)
-        if self_purelist != other_purelist:
+        if len(self) != len(other):
             return False
+        for c, case_self in enumerate(self):
+            case_other = other[c]
+            if case_self != case_other:
+                return False
         return True
 
     def __ne__(self, other):
@@ -122,73 +129,40 @@ class CropCaseList(list):
         instance = cls.__new__(cls)
         # Initialize as empty list
         list.__init__(instance)
-        # Set minimal required attributes
-        instance.names = []
-        instance.resolutions = set()
         return instance
 
-    def _copy_other_attributes(self, dest_case_list):
+    def _copy_attributes(self, dest_case_list):
         """
-        Copy all CropCaseList attributes from self to destination CropCaseList, skipping cft_ds.
+        Copy all CropCaseList attributes from self to destination CropCaseList.
         """
         for attr in [a for a in dir(self) if not a.startswith("__")]:
-            if attr == "cft_ds":
-                continue
             setattr(dest_case_list, attr, getattr(self, attr))
         return dest_case_list
 
     def sel(self, *args, **kwargs):
         """
-        Loops through CropCaseList.cft_ds, applying Dataset.sel() with given arguments.
+        Makes a copy of this CropCaseList, applying CropCase.sel() with the given arguments.
         """
         new_case_list = self._create_empty()
 
-        # Copy each cft_ds one at a time for memory efficiency
+        # .sel() each CropCase in list
         for case in self:
-            # TODO: Might be more memory-efficient to not do this deep copy, instead copying
-            # everything EXCEPT cft_ds.
-            case_copy = copy.deepcopy(case)
-            case_copy.cft_ds = case_copy.cft_ds.sel(*args, **kwargs)
-            new_case_list.append(case_copy)
+            new_case_list.append(case.sel(*args, **kwargs))
 
         # Copy over other attributes
-        new_case_list = self._copy_other_attributes(new_case_list)
+        new_case_list = self._copy_attributes(new_case_list)
         return new_case_list
 
     def isel(self, *args, **kwargs):
         """
-        Loops through CropCaseList.cft_ds, applying Dataset.isel() with given arguments.
+        Makes a copy of this CropCaseList, applying CropCase.isel() with the given arguments.
         """
         new_case_list = self._create_empty()
 
-        # Copy each cft_ds one at a time for memory efficiency
+        # .isel() each CropCase in list
         for case in self:
-            # TODO: Might be more memory-efficient to not do this deep copy, instead copying
-            # everything EXCEPT cft_ds.
-            case_copy = copy.deepcopy(case)
-            case_copy.cft_ds = case_copy.cft_ds.isel(*args, **kwargs)
-            new_case_list.append(case_copy)
+            new_case_list.append(case.isel(*args, **kwargs))
 
         # Copy over other attributes
-        new_case_list = self._copy_other_attributes(new_case_list)
-        return new_case_list
-
-    def sel_safer(self, *args, **kwargs):
-        """
-        As sel(), but may be easier to maintain as more attributes are added to CropCaseList. Tradeoff
-        is that this is less memory-efficient.
-        """
-        new_case_list = copy.deepcopy(self)
-        for case in new_case_list:
-            case.cft_ds = case.cft_ds.sel(*args, **kwargs)
-        return new_case_list
-
-    def isel_safer(self, *args, **kwargs):
-        """
-        As isel(), but may be easier to maintain as more attributes are added to CropCaseList. Tradeoff
-        is that this is less memory-efficient.
-        """
-        new_case_list = copy.deepcopy(self)
-        for case in new_case_list:
-            case.cft_ds = case.cft_ds.isel(*args, **kwargs)
+        new_case_list = self._copy_attributes(new_case_list)
         return new_case_list

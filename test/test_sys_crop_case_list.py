@@ -73,9 +73,71 @@ def test_cropcaselist_sel_nothing():
     assert this_case_list == this_case_list.sel()
 
 
+def test_cropcaselist_sel_cotton():
+    """
+    Test CropCaseList.sel() with a selection
+    """
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_dim = "crop"
+    sel_crop = "cotton"
+    this_case_list_sel = this_case_list.sel({this_dim: sel_crop})
+
+    # Check that sel() got rid of crop dimension
+    for case in this_case_list:
+        assert this_dim in case.cft_ds.dims
+    for case_sel in this_case_list_sel:
+        assert this_dim not in case_sel.cft_ds.dims
+
+    # Check that sel() got rid of all but one crop
+    for case in this_case_list:
+        assert case.cft_ds.sizes[this_dim] > 1
+    for case_sel in this_case_list_sel:
+        assert case_sel.cft_ds[this_dim].values == sel_crop
+
+    # Check that cft_ds objects differ
+    for c, case in enumerate(this_case_list):
+        case_sel = this_case_list_sel[c]
+        assert not case.cft_ds.equals(case_sel.cft_ds)
+
+    # Check == and != on result
+    assert not this_case_list == this_case_list_sel
+    assert this_case_list != this_case_list_sel
+
+
 def test_cropcaselist_isel_nothing():
     """
     Make sure that CropCaseList.isel() with no (kw)args returns an exact copy
     """
     this_case_list = CropCaseList(opts=DEFAULT_OPTS)
     assert this_case_list == this_case_list.isel()
+
+
+def test_cropcaselist_isel_one_timestep():
+    """
+    Test CropCaseList.isel() with a selection
+    """
+    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_dim = "time"
+    isel_timestep = 2
+    this_case_list_isel = this_case_list.isel({this_dim: isel_timestep})
+
+    # Check that sel() got rid of time dimension
+    for case in this_case_list:
+        assert this_dim in case.cft_ds.dims
+    for case_isel in this_case_list_isel:
+        assert this_dim not in case_isel.cft_ds.dims
+
+    # Check that sel() got rid of all but one timestep
+    for case in this_case_list:
+        assert case.cft_ds.sizes[this_dim] > 1
+    for case_isel in this_case_list_isel:
+        assert case_isel.cft_ds[this_dim].size == 1
+
+    # Check that cft_ds objects differ
+    for c, case in enumerate(this_case_list):
+        case_isel = this_case_list_isel[c]
+        assert not case.cft_ds.equals(case_isel.cft_ds)
+
+    # Check == and != on result
+    assert not this_case_list == this_case_list_isel
+    assert this_case_list != this_case_list_isel
