@@ -1,6 +1,7 @@
 """
 A class for holding a list of CropCases and information about them
 """
+
 from __future__ import annotations
 
 import copy
@@ -17,6 +18,7 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cropcase import CropCase
     from resolutions import identify_resolution
+
 
 class CropCaseList(list):
     """
@@ -40,6 +42,26 @@ class CropCaseList(list):
             opts,
         )
         self.resolutions = {case.cft_ds.attrs["resolution"] for case in self}
+
+    def __eq__(self, other):
+        # Check that they're both CropCaseLists
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+
+        # Check that all attributes match
+        for attr in [a for a in dir(self) if not a.startswith("__")]:
+            try:
+                if not getattr(self, attr) == getattr(other, attr):
+                    return False
+            except:  # pylint: disable=bare-except
+                return False
+
+        # Check that all cases match
+        self_purelist = list(self)
+        assert isinstance(self_purelist, list)
+        assert not isinstance(self_purelist, CropCaseList)
+        other_purelist = list(other)
+        return self_purelist == other_purelist
 
     def _import_cases(
         self,

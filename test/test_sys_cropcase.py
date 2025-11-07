@@ -7,6 +7,7 @@ Module to unit-test cropcase.py
 
 import sys
 import os
+import copy
 import numpy as np
 import xarray as xr
 import pytest
@@ -107,6 +108,12 @@ def test_setup_cropcase(tmp_path):
     ds = xr.open_dataset(os.path.join(temp_dir, CFT_DS_FILENAME))
     assert ds.sizes["time"] == 5
 
+    # Check that equality works when called on a deep copy of itself...
+    this_case_copy = copy.deepcopy(this_case)
+    assert this_case == this_case_copy
+    # ... but not after changing something
+    this_case_copy.name = "82nr924nd"
+    assert this_case != this_case_copy
 
 def test_setup_cropcase_noperms(tmp_path):
     """

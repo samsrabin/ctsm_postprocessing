@@ -219,6 +219,27 @@ class CropCase:
         if hasattr(self.cft_ds["cft_crop"].data, "compute"):
             self.cft_ds["cft_crop"] = self.cft_ds["cft_crop"].compute()
 
+    def __eq__(self, other):
+        # Check that they're both CropCases
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+
+        # Check that all attributes match (excluding methods)
+        for attr in [a for a in dir(self) if not a.startswith("__")]:
+            # Skip callable attributes (methods)
+            if callable(getattr(self, attr)):
+                continue
+            if not hasattr(other, attr):
+                return False
+            try:
+                value_self = getattr(self, attr)
+                value_other = getattr(other, attr)
+                if not value_self == value_other:
+                    return False
+            except:  # pylint: disable=bare-except
+                return False
+        return True
+
     def _read_and_process_files(
         self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
     ):

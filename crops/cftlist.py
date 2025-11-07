@@ -71,6 +71,13 @@ class CftList:
             if len(cft.where) == 0:
                 print("Warning: No occurrences found of " + cft.name)
 
+    def __eq__(self, other):
+        # Check that they're both CftLists
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+        result = self.cft_list == other.cft_list
+        return result
+
     def __getitem__(self, index):
         return self.cft_list[index]
 

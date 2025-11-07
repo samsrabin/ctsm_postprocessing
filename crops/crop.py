@@ -53,5 +53,34 @@ class Crop:
             self.where = np.append(self.where, cft.get_where(ds))
         self.where = np.sort(self.where)
 
+    def __eq__(self, other):
+        # Check that they're both Crops
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+
+        # Check that all attributes match (excluding methods)
+        for attr in [a for a in dir(self) if not a.startswith("__")]:
+            # Skip callable attributes (methods)
+            if callable(getattr(self, attr)):
+                continue
+            if not hasattr(other, attr):
+                return False
+            try:
+                value_self = getattr(self, attr)
+                value_other = getattr(other, attr)
+                if not isinstance(value_other, type(value_self)):
+                    return False
+                if isinstance(value_self, np.ndarray):
+                    do_match = np.array_equal(value_self, value_other, equal_nan=True)
+                else:
+                    do_match = value_self == value_other or (
+                        value_self is None and value_other is None
+                    )
+                if not do_match:
+                    return False
+            except:  # pylint: disable=bare-except
+                return False
+        return True
+
     def __str__(self):
         return f"{self.name}: {', '.join(f'{x.name} ({x.pft_num})' for x in self.cft_list)}"
