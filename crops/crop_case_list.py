@@ -5,8 +5,16 @@ from __future__ import annotations
 
 import copy
 import os
+import sys
 from time import time
 
+try:
+    # Attempt relative import if running as part of a package
+    from .cropcase import CropCase
+except ImportError:
+    # Fallback to absolute import if running as a script
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from crops.cropcase import CropCase
 
 class CropCaseList(list):
     """
@@ -16,7 +24,6 @@ class CropCaseList(list):
     def __init__(
         self,
         *args,
-        CropCase,
         identify_resolution,
         opts,
     ):
@@ -29,7 +36,6 @@ class CropCaseList(list):
 
         # Import cases
         self._import_cases(
-            CropCase,
             identify_resolution,
             opts,
         )
@@ -37,7 +43,6 @@ class CropCaseList(list):
 
     def _import_cases(
         self,
-        CropCase,  # pylint: disable=invalid-name
         identify_resolution,
         opts,
     ):
