@@ -13,38 +13,12 @@ import pytest
 try:
     # Attempt relative import if running as part of a package
     from ..cropcase import CropCase, CFT_DS_FILENAME
+    from ..crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from crops.cropcase import CropCase, CFT_DS_FILENAME
-
-cfts_to_include = [
-    "temperate_corn",
-    "tropical_corn",
-    "cotton",
-    "rice",
-    "temperate_soybean",
-    "tropical_soybean",
-    "sugarcane",
-    "spring_wheat",
-    "irrigated_temperate_corn",
-    "irrigated_tropical_corn",
-    "irrigated_cotton",
-    "irrigated_rice",
-    "irrigated_temperate_soybean",
-    "irrigated_tropical_soybean",
-    "irrigated_sugarcane",
-    "irrigated_spring_wheat",
-]
-
-crops_to_include = [
-    "corn",
-    "cotton",
-    "rice",
-    "soybean",
-    "sugarcane",
-    "wheat",
-]
+    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
 
 START_YEAR = 1988
 END_YEAR = 1990
@@ -62,18 +36,11 @@ def test_setup_cropcase(tmp_path):
         file_dir=file_dir,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=cfts_to_include,
-        crops_to_include=crops_to_include,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
-    assert [x.name for x in this_case.crop_list] == [
-        "corn",
-        "cotton",
-        "rice",
-        "soybean",
-        "sugarcane",
-        "wheat",
-    ]
+    assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Check that cft-to-crop is working right
     assert list(this_case.cft_ds["cft_crop"].values) == [
@@ -146,18 +113,11 @@ def test_setup_cropcase_noperms(tmp_path):
         file_dir=file_dir,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=cfts_to_include,
-        crops_to_include=crops_to_include,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
-    assert [x.name for x in this_case.crop_list] == [
-        "corn",
-        "cotton",
-        "rice",
-        "soybean",
-        "sugarcane",
-        "wheat",
-    ]
+    assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Ensure that derived variables are present.
     assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
@@ -197,19 +157,12 @@ def test_setup_cropcase_nofile(tmp_path):
         file_dir=file_dir,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=cfts_to_include,
-        crops_to_include=crops_to_include,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
         force_no_cft_ds_file=True,
     )
-    assert [x.name for x in this_case.crop_list] == [
-        "corn",
-        "cotton",
-        "rice",
-        "soybean",
-        "sugarcane",
-        "wheat",
-    ]
+    assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Ensure that at least one derived variable is present.
     assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
@@ -232,8 +185,8 @@ def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
             file_dir=file_dir,
             start_year=START_YEAR,
             end_year=END_YEAR,
-            cfts_to_include=cfts_to_include,
-            crops_to_include=crops_to_include,
+            cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+            crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
             cft_ds_dir=temp_dir,
             force_new_cft_ds_file=True,
             force_no_cft_ds_file=True,
