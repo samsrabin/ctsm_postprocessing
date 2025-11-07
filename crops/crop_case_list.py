@@ -11,10 +11,12 @@ from time import time
 try:
     # Attempt relative import if running as part of a package
     from .cropcase import CropCase
+    from ..resolutions import identify_resolution
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cropcase import CropCase
+    from resolutions import identify_resolution
 
 class CropCaseList(list):
     """
@@ -24,7 +26,6 @@ class CropCaseList(list):
     def __init__(
         self,
         *args,
-        identify_resolution,
         opts,
     ):
         # Initialize as a normal list...
@@ -36,14 +37,12 @@ class CropCaseList(list):
 
         # Import cases
         self._import_cases(
-            identify_resolution,
             opts,
         )
         self.resolutions = {case.cft_ds.attrs["resolution"] for case in self}
 
     def _import_cases(
         self,
-        identify_resolution,
         opts,
     ):
         start = time()
