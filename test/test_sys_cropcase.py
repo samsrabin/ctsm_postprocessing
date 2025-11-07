@@ -1,14 +1,14 @@
 """
 Module to unit-test cropcase.py
 """
+# pylint: disable=redefined-outer-name
+# Note: redefined-outer-name is disabled because pytest fixtures are used as test function parameters
 
 import sys
 import os
-import shutil
-import unittest
-import tempfile
 import numpy as np
 import xarray as xr
+import pytest
 
 try:
     # Attempt relative import if running as part of a package
@@ -50,189 +50,191 @@ START_YEAR = 1988
 END_YEAR = 1990
 
 
-class TestSysCropCase(unittest.TestCase):
+def test_setup_cropcase(tmp_path):
     """
-    Class for testing CropCase
+    Make sure that CropCase does not error when importing test data
     """
+    temp_dir = str(tmp_path)
+    name = "crujra_matreqs"
+    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+    this_case = CropCase(
+        name=name,
+        file_dir=file_dir,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=cfts_to_include,
+        crops_to_include=crops_to_include,
+        cft_ds_dir=temp_dir,
+    )
+    assert [x.name for x in this_case.crop_list] == [
+        "corn",
+        "cotton",
+        "rice",
+        "soybean",
+        "sugarcane",
+        "wheat",
+    ]
 
-    def setUp(self):
-        self._tempdir = tempfile.mkdtemp()
+    # Check that cft-to-crop is working right
+    assert list(this_case.cft_ds["cft_crop"].values) == [
+        "corn",
+        "corn",
+        "wheat",
+        "wheat",
+        "soybean",
+        "soybean",
+        "cotton",
+        "cotton",
+        "rice",
+        "rice",
+        "sugarcane",
+        "sugarcane",
+        "corn",
+        "corn",
+        "soybean",
+        "soybean",
+    ]
 
-    def tearDown(self):
-        """
-        Remove temporary directory
-        """
-        shutil.rmtree(self._tempdir, ignore_errors=True)
+    # Ensure that derived variables are present.
+    assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
+    assert "YIELD_PERHARV" in this_case.cft_ds
+    assert "YIELD_ANN" in this_case.cft_ds
 
-    def test_setup_cropcase(self):
-        """
-        Make sure that CropCase does not error when importing test data
-        """
-        name = "crujra_matreqs"
-        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
-        this_case = CropCase(
+    # Ensure that not all yield values are zero
+    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0)
+    assert np.any(this_case.cft_ds["YIELD_PERHARV"] > 0)
+    assert np.any(this_case.cft_ds["YIELD_ANN"] > 0)
+
+    # Ensure that these derived variables have the right dims
+    assert this_case.cft_ds["crop_cft_area"].dims == ("pft", "cft", "time")
+    assert this_case.cft_ds["crop_area"].dims == ("pft", "crop", "time")
+
+    # Ensure that NaN values are handled correctly.
+    # First, ensure that there are actually some NaN values that will be tested.
+    assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
+    assert np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"]))
+    # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
+    # doesn't have any NaN values.
+    assert not np.any(np.isnan(this_case.cft_ds["YIELD_ANN"]))
+
+    # Ensure that saved file has all 5 years even though we only asked for 3
+    ds = xr.open_dataset(os.path.join(temp_dir, CFT_DS_FILENAME))
+    assert ds.sizes["time"] == 5
+
+    # Ensure that values of some derived variables are correct
+    assert this_case.cft_ds["crop_cft_area"].mean().values == pytest.approx(379009483.9427163)
+    assert this_case.cft_ds["crop_cft_prod"].mean().values == pytest.approx(198672315418.34564)
+    assert this_case.cft_ds["crop_cft_yield"].mean().values == pytest.approx(602.2368436177571)
+    assert this_case.cft_ds["crop_area"].mean().values == pytest.approx(1010691957.180577)
+    assert this_case.cft_ds["crop_prod"].mean().values == pytest.approx(529792841115.5884)
+    assert this_case.cft_ds["crop_yield"].mean().values == pytest.approx(568.3093914610291)
+
+
+def test_setup_cropcase_noperms(tmp_path):
+    """
+    Make sure that CropCase doesn't try to save file if user doesn't have write perms
+    """
+    temp_dir = str(tmp_path)
+    name = "crujra_matreqs"
+
+    # Disable user write bit
+    os.chmod(temp_dir, 0o444)
+
+    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+    this_case = CropCase(
+        name=name,
+        file_dir=file_dir,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=cfts_to_include,
+        crops_to_include=crops_to_include,
+        cft_ds_dir=temp_dir,
+    )
+    assert [x.name for x in this_case.crop_list] == [
+        "corn",
+        "cotton",
+        "rice",
+        "soybean",
+        "sugarcane",
+        "wheat",
+    ]
+
+    # Ensure that derived variables are present.
+    assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
+    assert "YIELD_PERHARV" in this_case.cft_ds
+    assert "YIELD_ANN" in this_case.cft_ds
+
+    # Ensure that not all yield values are zero
+    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0)
+    assert np.any(this_case.cft_ds["YIELD_PERHARV"] > 0)
+    assert np.any(this_case.cft_ds["YIELD_ANN"] > 0)
+
+    # Ensure that NaN values are handled correctly.
+    # First, ensure that there are actually some NaN values that will be tested.
+    assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
+    assert np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"]))
+    # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
+    # doesn't have any NaN values.
+    assert not np.any(np.isnan(this_case.cft_ds["YIELD_ANN"]))
+
+    # Check that we only have 3 years in the dataset
+    assert this_case.cft_ds.sizes["time"] == 3
+
+    # Set user write bit
+    os.chmod(temp_dir, 0o644)
+
+
+def test_setup_cropcase_nofile(tmp_path):
+    """
+    Make sure that CropCase doesn't try to save file if user DOES have write perms but says
+    force_no_cft_ds_file=True
+    """
+    temp_dir = str(tmp_path)
+    name = "crujra_matreqs"
+    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+    this_case = CropCase(
+        name=name,
+        file_dir=file_dir,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=cfts_to_include,
+        crops_to_include=crops_to_include,
+        cft_ds_dir=temp_dir,
+        force_no_cft_ds_file=True,
+    )
+    assert [x.name for x in this_case.crop_list] == [
+        "corn",
+        "cotton",
+        "rice",
+        "soybean",
+        "sugarcane",
+        "wheat",
+    ]
+
+    # Ensure that at least one derived variable is present.
+    assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
+
+    # Ensure file wasn't saved
+    assert not os.path.exists(os.path.join(temp_dir, CFT_DS_FILENAME))
+
+
+def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
+    """
+    Make sure that CropCase raises error if both force_new_cft_ds_file and force_no_cft_ds_file
+    are true
+    """
+    temp_dir = str(tmp_path)
+    name = "crujra_matreqs"
+    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
+    with pytest.raises(ValueError):
+        CropCase(
             name=name,
             file_dir=file_dir,
             start_year=START_YEAR,
             end_year=END_YEAR,
             cfts_to_include=cfts_to_include,
             crops_to_include=crops_to_include,
-            cft_ds_dir=self._tempdir,
-        )
-        self.assertListEqual(
-            [x.name for x in this_case.crop_list],
-            ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
-        )
-
-        # Check that cft-to-crop is working right
-        self.assertListEqual(
-            list(this_case.cft_ds["cft_crop"].values),
-            [
-                "corn",
-                "corn",
-                "wheat",
-                "wheat",
-                "soybean",
-                "soybean",
-                "cotton",
-                "cotton",
-                "rice",
-                "rice",
-                "sugarcane",
-                "sugarcane",
-                "corn",
-                "corn",
-                "soybean",
-                "soybean",
-            ],
-        )
-
-        # Ensure that derived variables are present.
-        self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
-        self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
-        self.assertTrue("YIELD_ANN" in this_case.cft_ds)
-
-        # Ensure that not all yield values are zero
-        self.assertTrue(np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0))
-        self.assertTrue(np.any(this_case.cft_ds["YIELD_PERHARV"] > 0))
-        self.assertTrue(np.any(this_case.cft_ds["YIELD_ANN"] > 0))
-
-        # Ensure that these derived variables have the right dims
-        self.assertTupleEqual(this_case.cft_ds["crop_cft_area"].dims, ("pft", "cft", "time"))
-        self.assertTupleEqual(this_case.cft_ds["crop_area"].dims, ("pft", "crop", "time"))
-
-        # Ensure that NaN values are handled correctly.
-        # First, ensure that there are actually some NaN values that will be tested.
-        self.assertTrue(np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"])))
-        self.assertTrue(np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"])))
-        # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
-        # doesn't have any NaN values.
-        self.assertFalse(np.any(np.isnan(this_case.cft_ds["YIELD_ANN"])))
-
-        # Ensure that saved file has all 5 years even though we only asked for 3
-        ds = xr.open_dataset(os.path.join(self._tempdir, CFT_DS_FILENAME))
-        self.assertTrue(ds.sizes["time"] == 5)
-
-        # Ensure that values of some derived variables are correct
-        self.assertAlmostEqual(this_case.cft_ds["crop_cft_area"].mean().values, 379009483.9427163)
-        self.assertAlmostEqual(this_case.cft_ds["crop_cft_prod"].mean().values, 198672315418.34564)
-        self.assertAlmostEqual(this_case.cft_ds["crop_cft_yield"].mean().values, 602.2368436177571)
-        self.assertAlmostEqual(this_case.cft_ds["crop_area"].mean().values, 1010691957.180577)
-        self.assertAlmostEqual(this_case.cft_ds["crop_prod"].mean().values, 529792841115.5884)
-        self.assertAlmostEqual(this_case.cft_ds["crop_yield"].mean().values, 568.3093914610291)
-
-    def test_setup_cropcase_noperms(self):
-        """
-        Make sure that CropCase doesn't try to save file if user doesn't have write perms
-        """
-        name = "crujra_matreqs"
-
-        # Disable user write bit
-        os.chmod(self._tempdir, 0o444)
-
-        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
-        this_case = CropCase(
-            name=name,
-            file_dir=file_dir,
-            start_year=START_YEAR,
-            end_year=END_YEAR,
-            cfts_to_include=cfts_to_include,
-            crops_to_include=crops_to_include,
-            cft_ds_dir=self._tempdir,
-        )
-        self.assertListEqual(
-            [x.name for x in this_case.crop_list],
-            ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
-        )
-
-        # Ensure that derived variables are present.
-        self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
-        self.assertTrue("YIELD_PERHARV" in this_case.cft_ds)
-        self.assertTrue("YIELD_ANN" in this_case.cft_ds)
-
-        # Ensure that not all yield values are zero
-        self.assertTrue(np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0))
-        self.assertTrue(np.any(this_case.cft_ds["YIELD_PERHARV"] > 0))
-        self.assertTrue(np.any(this_case.cft_ds["YIELD_ANN"] > 0))
-
-        # Ensure that NaN values are handled correctly.
-        # First, ensure that there are actually some NaN values that will be tested.
-        self.assertTrue(np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"])))
-        self.assertTrue(np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"])))
-        # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
-        # doesn't have any NaN values.
-        self.assertFalse(np.any(np.isnan(this_case.cft_ds["YIELD_ANN"])))
-
-        # Check that we only have 3 years in the dataset
-        self.assertTrue(this_case.cft_ds.sizes["time"] == 3)
-
-        # Set user write bit
-        os.chmod(self._tempdir, 0o644)
-
-    def test_setup_cropcase_nofile(self):
-        """
-        Make sure that CropCase doesn't try to save file if user DOES have write perms but says
-        force_no_cft_ds_file=True
-        """
-        name = "crujra_matreqs"
-        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
-        this_case = CropCase(
-            name=name,
-            file_dir=file_dir,
-            start_year=START_YEAR,
-            end_year=END_YEAR,
-            cfts_to_include=cfts_to_include,
-            crops_to_include=crops_to_include,
-            cft_ds_dir=self._tempdir,
+            cft_ds_dir=temp_dir,
+            force_new_cft_ds_file=True,
             force_no_cft_ds_file=True,
         )
-        self.assertListEqual(
-            [x.name for x in this_case.crop_list],
-            ["corn", "cotton", "rice", "soybean", "sugarcane", "wheat"],
-        )
-
-        # Ensure that at least one derived variable is present.
-        self.assertTrue("GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds)
-
-        # Ensure file wasn't saved
-        self.assertFalse(os.path.exists(os.path.join(self._tempdir, CFT_DS_FILENAME)))
-
-    def test_setup_cropcase_error_if_newfile_and_nofile(self):
-        """
-        Make sure that CropCase raises error if both force_new_cft_ds_file and force_no_cft_ds_file
-        are true
-        """
-        name = "crujra_matreqs"
-        file_dir = os.path.join(os.path.dirname(__file__), "testdata")
-        with self.assertRaises(ValueError):
-            this_case = CropCase(
-                name=name,
-                file_dir=file_dir,
-                start_year=START_YEAR,
-                end_year=END_YEAR,
-                cfts_to_include=cfts_to_include,
-                crops_to_include=crops_to_include,
-                cft_ds_dir=self._tempdir,
-                force_new_cft_ds_file=True,
-                force_no_cft_ds_file=True,
-            )
