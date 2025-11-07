@@ -47,7 +47,16 @@ RESOLUTION_LIST = [
         lat_min = -90,
         lat_max = 90,
         lat_n = 192,
-    )
+    ),
+    Resolution(
+        "f10_for_testing",
+        lon_min = 263.75,
+        lon_max = 266.25,
+        lon_n = 3,
+        lat_min = 38.16754,
+        lat_max = 40.05236,
+        lat_n = 3,
+    ),
 ]
 
 def identify_resolution(ds):  # pylint: disable=invalid-name

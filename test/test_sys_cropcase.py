@@ -1,6 +1,7 @@
 """
 Module to unit-test cropcase.py
 """
+
 # pylint: disable=redefined-outer-name
 # Note: redefined-outer-name is disabled because pytest fixtures are used as test function parameters
 
@@ -14,32 +15,23 @@ try:
     # Attempt relative import if running as part of a package
     from ..cropcase import CropCase, CFT_DS_FILENAME
     from ..crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 except ImportError:
     # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # Add both the parent directory (for crops module) and grandparent (for test module)
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    grandparent_dir = os.path.dirname(parent_dir)
+    sys.path.insert(0, parent_dir)
+    sys.path.insert(0, grandparent_dir)
     from crops.cropcase import CropCase, CFT_DS_FILENAME
     from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
-
-START_YEAR = 1988
-END_YEAR = 1990
+    from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
 
-def test_setup_cropcase(tmp_path):
+def check_crujra_matreqs_case_shared(this_case):
     """
-    Make sure that CropCase does not error when importing test data
+    Function, shared with test_sys_crop_case_list, to check the crujra_matreqs case
     """
-    temp_dir = str(tmp_path)
-    name = "crujra_matreqs"
-    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
-    this_case = CropCase(
-        name=name,
-        file_dir=file_dir,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
     assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Check that cft-to-crop is working right
@@ -84,10 +76,6 @@ def test_setup_cropcase(tmp_path):
     # doesn't have any NaN values.
     assert not np.any(np.isnan(this_case.cft_ds["YIELD_ANN"]))
 
-    # Ensure that saved file has all 5 years even though we only asked for 3
-    ds = xr.open_dataset(os.path.join(temp_dir, CFT_DS_FILENAME))
-    assert ds.sizes["time"] == 5
-
     # Ensure that values of some derived variables are correct
     assert this_case.cft_ds["crop_cft_area"].mean().values == pytest.approx(379009483.9427163)
     assert this_case.cft_ds["crop_cft_prod"].mean().values == pytest.approx(198672315418.34564)
@@ -97,20 +85,41 @@ def test_setup_cropcase(tmp_path):
     assert this_case.cft_ds["crop_yield"].mean().values == pytest.approx(568.3093914610291)
 
 
+def test_setup_cropcase(tmp_path):
+    """
+    Make sure that CropCase does not error when importing test data
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+
+    # Perform a bunch of checks
+    check_crujra_matreqs_case_shared(this_case)
+
+    # Ensure that saved file has all 5 years even though we only asked for 3
+    ds = xr.open_dataset(os.path.join(temp_dir, CFT_DS_FILENAME))
+    assert ds.sizes["time"] == 5
+
+
 def test_setup_cropcase_noperms(tmp_path):
     """
     Make sure that CropCase doesn't try to save file if user doesn't have write perms
     """
     temp_dir = str(tmp_path)
-    name = "crujra_matreqs"
 
     # Disable user write bit
     os.chmod(temp_dir, 0o444)
 
-    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
     this_case = CropCase(
-        name=name,
-        file_dir=file_dir,
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
         cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
@@ -150,11 +159,9 @@ def test_setup_cropcase_nofile(tmp_path):
     force_no_cft_ds_file=True
     """
     temp_dir = str(tmp_path)
-    name = "crujra_matreqs"
-    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
     this_case = CropCase(
-        name=name,
-        file_dir=file_dir,
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
         cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
@@ -177,12 +184,10 @@ def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
     are true
     """
     temp_dir = str(tmp_path)
-    name = "crujra_matreqs"
-    file_dir = os.path.join(os.path.dirname(__file__), "testdata")
     with pytest.raises(ValueError):
         CropCase(
-            name=name,
-            file_dir=file_dir,
+            name=CASE_NAME,
+            file_dir=FILE_DIR,
             start_year=START_YEAR,
             end_year=END_YEAR,
             cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
