@@ -29,6 +29,24 @@ except ImportError:
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
 
+@pytest.fixture
+def cropcase(tmp_path):
+    """
+    Fixture to create a CropCase instance for testing.
+    This is reused across multiple tests to avoid repeated instantiation.
+    """
+    temp_dir = str(tmp_path)
+    return CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
+        cft_ds_dir=temp_dir,
+    )
+
+
 def check_crujra_matreqs_case_shared(this_case):
     """
     Function, shared with test_sys_crop_case_list, to check the crujra_matreqs case
@@ -86,20 +104,12 @@ def check_crujra_matreqs_case_shared(this_case):
     assert this_case.cft_ds["crop_yield"].mean().values == pytest.approx(568.3093914610291)
 
 
-def test_setup_cropcase(tmp_path):
+def test_setup_cropcase(cropcase, tmp_path):
     """
     Make sure that CropCase does not error when importing test data
     """
     temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
 
     # Perform a bunch of checks
     check_crujra_matreqs_case_shared(this_case)
@@ -206,21 +216,11 @@ def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
         )
 
 
-def test_cropcase_equality(tmp_path):
+def test_cropcase_equality(cropcase):
     """
     Basic checks of CropCase.__eq__ and __ne__
     """
-    # Import
-    temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
 
     # Check that changing cft_ds causes inequality
     copy_case = copy.deepcopy(this_case)
@@ -234,37 +234,19 @@ def test_cropcase_equality(tmp_path):
     assert this_case != copy_case
 
 
-def test_cropcase_sel_nothing(tmp_path):
+def test_cropcase_sel_nothing(cropcase):
     """
     Make sure that CropCase.sel() with no (kw)args returns an exact copy
     """
-    temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
     assert this_case == this_case.sel()
 
 
-def test_cropcase_sel_cotton(tmp_path):
+def test_cropcase_sel_cotton(cropcase):
     """
     Test CropCase.sel() with a selection
     """
-    temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
     this_dim = "crop"
     sel_crop = "cotton"
     this_case_sel = this_case.sel({this_dim: sel_crop})
@@ -285,37 +267,19 @@ def test_cropcase_sel_cotton(tmp_path):
     assert this_case != this_case_sel
 
 
-def test_cropcase_isel_nothing(tmp_path):
+def test_cropcase_isel_nothing(cropcase):
     """
     Make sure that CropCase.isel() with no (kw)args returns an exact copy
     """
-    temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
     assert this_case == this_case.isel()
 
 
-def test_cropcaselist_isel_one_timestep(tmp_path):
+def test_cropcaselist_isel_one_timestep(cropcase):
     """
     Test CropCaseList.isel() with a selection
     """
-    temp_dir = str(tmp_path)
-    this_case = CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
-        cft_ds_dir=temp_dir,
-    )
+    this_case = cropcase
     this_dim = "time"
     isel_timestep = 2
     this_case_isel = this_case.isel({this_dim: isel_timestep})
