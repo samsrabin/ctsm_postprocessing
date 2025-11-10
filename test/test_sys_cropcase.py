@@ -29,13 +29,13 @@ except ImportError:
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
 
-@pytest.fixture
-def cropcase(tmp_path):
+@pytest.fixture(scope="session")
+def cropcase_base(tmp_path_factory):
     """
-    Fixture to create a CropCase instance for testing.
-    This is reused across multiple tests to avoid repeated instantiation.
+    Session-scoped fixture to create a CropCase instance once for all tests.
+    This is created only once per test session to speed up testing.
     """
-    temp_dir = str(tmp_path)
+    temp_dir = str(tmp_path_factory.mktemp("cropcase_data"))
     return CropCase(
         name=CASE_NAME,
         file_dir=FILE_DIR,
@@ -45,6 +45,15 @@ def cropcase(tmp_path):
         crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
+
+
+@pytest.fixture
+def cropcase(cropcase_base):
+    """
+    Fixture to provide a deep copy of the base CropCase instance for testing.
+    Each test gets its own copy to ensure test isolation.
+    """
+    return copy.deepcopy(cropcase_base)
 
 
 def check_crujra_matreqs_case_shared(this_case):
@@ -104,18 +113,18 @@ def check_crujra_matreqs_case_shared(this_case):
     assert this_case.cft_ds["crop_yield"].mean().values == pytest.approx(568.3093914610291)
 
 
-def test_setup_cropcase(cropcase, tmp_path):
+def test_setup_cropcase(cropcase):
     """
     Make sure that CropCase does not error when importing test data
     """
-    temp_dir = str(tmp_path)
     this_case = cropcase
 
     # Perform a bunch of checks
     check_crujra_matreqs_case_shared(this_case)
 
     # Ensure that saved file has all 5 years even though we only asked for 3
-    ds = xr.open_dataset(os.path.join(temp_dir, CFT_DS_FILENAME))
+    ds = xr.open_dataset(this_case.cft_ds_file)
+    assert END_YEAR - START_YEAR + 1 < 5
     assert ds.sizes["time"] == 5
 
     # Check that equality works when called on a deep copy of itself...
