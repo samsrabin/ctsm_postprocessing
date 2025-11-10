@@ -8,6 +8,7 @@ Module to unit-test CropCaseList
 import sys
 import os
 import copy
+import pytest
 
 try:
     # Attempt relative import if running as part of a package
@@ -41,21 +42,39 @@ DEFAULT_OPTS["force_no_cft_ds_file"] = (
 )
 
 
-def test_setup_cropcaselist():
+@pytest.fixture(scope="session")
+def cropcaselist_base():
+    """
+    Session-scoped fixture to create a CropCaseList instance once for all tests.
+    This is created only once per test session to speed up testing.
+    """
+    return CropCaseList(opts=DEFAULT_OPTS)
+
+
+@pytest.fixture
+def cropcaselist(cropcaselist_base):
+    """
+    Fixture to provide a deep copy of the base CropCaseList instance for testing.
+    Each test gets its own copy to ensure test isolation.
+    """
+    return copy.deepcopy(cropcaselist_base)
+
+
+def test_setup_cropcaselist(cropcaselist):
     """
     Make sure that CropCaseList does not error when importing test data
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
 
     # Perform a bunch of checks
     check_crujra_matreqs_case_shared(this_case_list[0])
 
 
-def test_cropcaselist_equality():
+def test_cropcaselist_equality(cropcaselist):
     """
     Basic checks of CropCaseList.__eq__() and __ne__()
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
 
     # Check that equality works when called on a deep copy of itself...
     this_case_list_copy = copy.deepcopy(this_case_list)
@@ -65,19 +84,19 @@ def test_cropcaselist_equality():
     assert this_case_list != this_case_list_copy
 
 
-def test_cropcaselist_sel_nothing():
+def test_cropcaselist_sel_nothing(cropcaselist):
     """
     Make sure that CropCaseList.sel() with no (kw)args returns an exact copy
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
     assert this_case_list == this_case_list.sel()
 
 
-def test_cropcaselist_sel_cotton():
+def test_cropcaselist_sel_cotton(cropcaselist):
     """
     Test CropCaseList.sel() with a selection
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
     this_dim = "crop"
     sel_crop = "cotton"
     this_case_list_sel = this_case_list.sel({this_dim: sel_crop})
@@ -104,19 +123,19 @@ def test_cropcaselist_sel_cotton():
     assert this_case_list != this_case_list_sel
 
 
-def test_cropcaselist_isel_nothing():
+def test_cropcaselist_isel_nothing(cropcaselist):
     """
     Make sure that CropCaseList.isel() with no (kw)args returns an exact copy
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
     assert this_case_list == this_case_list.isel()
 
 
-def test_cropcaselist_isel_one_timestep():
+def test_cropcaselist_isel_one_timestep(cropcaselist):
     """
     Test CropCaseList.isel() with a selection
     """
-    this_case_list = CropCaseList(opts=DEFAULT_OPTS)
+    this_case_list = cropcaselist
     this_dim = "time"
     isel_timestep = 2
     this_case_list_isel = this_case_list.isel({this_dim: isel_timestep})
