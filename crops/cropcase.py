@@ -247,6 +247,13 @@ class CropCase:
     def __ne__(self, other):
         return not self == other
 
+    def __repr__(self):
+        if self.name is not None:
+            return f"CropCase({self.name})"
+        if "case_id" in self.cft_ds.attrs and self.cft_ds.attrs['case_id'] is not None:
+            return f"CropCase({self.cft_ds.attrs['case_id']})"
+        return super().__repr__()
+
     def _read_and_process_files(
         self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
     ):
