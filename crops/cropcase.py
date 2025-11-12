@@ -250,7 +250,7 @@ class CropCase:
     def __repr__(self):
         if self.name is not None:
             return f"CropCase({self.name})"
-        if "case_id" in self.cft_ds.attrs and self.cft_ds.attrs['case_id'] is not None:
+        if "case_id" in self.cft_ds.attrs and self.cft_ds.attrs["case_id"] is not None:
             return f"CropCase({self.cft_ds.attrs['case_id']})"
         return super().__repr__()
 
@@ -457,6 +457,9 @@ class CropCase:
         for attr in [a for a in dir(self) if not a.startswith("__")]:
             if attr == "cft_ds":
                 continue
+            # Skip callable attributes (methods) - they should be inherited from the class
+            if callable(getattr(self, attr)):
+                continue
             setattr(dest_case_list, attr, getattr(self, attr))
         return dest_case_list
 
@@ -464,6 +467,7 @@ class CropCase:
         """
         Makes a copy of CropCase with cft_ds having had Dataset.sel() applied with given arguments.
         """
+
         new_case = self._create_empty()
 
         # .sel() from cft_ds

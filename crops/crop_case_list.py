@@ -136,6 +136,9 @@ class CropCaseList(list):
         Copy all CropCaseList attributes from self to destination CropCaseList.
         """
         for attr in [a for a in dir(self) if not a.startswith("__")]:
+            # Skip callable attributes (methods) - they should be inherited from the class
+            if callable(getattr(self, attr)):
+                continue
             setattr(dest_case_list, attr, getattr(self, attr))
         return dest_case_list
 
