@@ -17,7 +17,7 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     """
 
     # Calculate CFT area
-    case_ds["cft_area"] = case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]
+    case_ds["cft_area"] = case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]
     case_ds["cft_area"] *= 1e6  # Convert km2 to m2
     case_ds["cft_area"].attrs["units"] = "m2"
     crop_cft_area_da = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_area")
@@ -78,7 +78,7 @@ def _get_yield_and_croplevel_stats(case_ds):
 
 def _harvest_area_stats(case_ds):
     hr = case_ds["HARVEST_REASON_PERHARV"]
-    cft_planted_area = (case_ds["pfts1d_gridcellarea"] * case_ds["pfts1d_wtgcell"]).where(
+    cft_planted_area = (case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]).where(
         case_ds["pfts1d_wtgcell"] > 0,
     ) * 1e6  # convert km2 to m2
     cft_planted_area.attrs["units"] = "m2"

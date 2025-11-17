@@ -94,9 +94,10 @@ def _get_area_p(ds):
     Get area of gridcell that is parent of each pft (patch)
     """
     area_g = []
+    area_da = ds["area"] * ds["landfrac"]
     for i, lon in enumerate(ds["grid1d_lon"].values):
         lat = ds["grid1d_lat"].values[i]
-        area_g.append(ds["area"].sel(lat=lat, lon=lon))
+        area_g.append(area_da.sel(lat=lat, lon=lon))
     area_g = np.array(area_g)
     area_p = []
     gridcell_vals = list(np.unique(ds["pfts1d_gi"].isel(cft=0).values))
@@ -371,10 +372,10 @@ class CropCase:
         # Get yield, marking non-viable harvests as zero and converting to wet matter
         self.get_yield(cft_ds)
 
-        # Get gridcell area
+        # Get gridcell land area
         cft_ds.load()
         area_p = _get_area_p(cft_ds)
-        cft_ds["pfts1d_gridcellarea"] = xr.DataArray(
+        cft_ds["pfts1d_landarea"] = xr.DataArray(
             data=area_p,
             coords={"pft": cft_ds["pft"].values},
             dims=["pft"],
