@@ -126,7 +126,9 @@ def da_circmean_doy(da, dim=None, **kwargs):
         result = da_circmean(da, dim=dim, low=low, high=high, **kwargs)
 
     # Round to nearest day
-    result = xr.apply_ufunc(_round_to_nearest_day, result, vectorize=True, dask="allowed")
+    result = xr.apply_ufunc(
+        _round_to_nearest_day, result, vectorize=True, dask="allowed", keep_attrs=True
+    )
 
     # Check that we ended up with integers (or close enough)
     all_nearly_integers = np.allclose(result.values, np.round(result.values), equal_nan=True)
