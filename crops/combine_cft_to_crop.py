@@ -123,7 +123,7 @@ def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
     return crop_cft_da
 
 
-def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
+def combine_cft_to_crop(ds, var_in, var_out, method, weights=None, **kwargs):
     """
     Combine CFT-level data into crop-level data using the specified method.
 
@@ -138,8 +138,14 @@ def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
     method : callable or str
         Method to use for combining CFT data. Can be:
         - A callable function
-        - Name of an xarray groupby method
+        - Name of an xarray groupby method (e.g., 'mean', 'sum', 'std')
         - Name of a numpy method
+    weights : str or xarray.DataArray, optional
+        Weights to use for weighted mean operations. Can be:
+        - Name of a variable in the dataset to use as weights
+        - An xarray.DataArray with 'cft' dimension matching the input data
+        Only supported when method='mean' (xarray groupby method).
+        Raises NotImplementedError for other methods.
     **kwargs
         Additional keyword arguments passed to the combining method
 
@@ -152,21 +158,68 @@ def combine_cft_to_crop(ds, var_in, var_out, method, **kwargs):
     ------
     AttributeError
         If the specified method cannot be found or is not callable
+    ValueError
+        If weights are specified but incompatible with the data
+    NotImplementedError
+        If weights are provided with an unsupported method
+
+    Examples
+    --------
+    >>> # Simple mean across CFTs within each crop
+    >>> ds = combine_cft_to_crop(ds, 'YIELD', 'YIELD_crop', method='mean')
+    >>>
+    >>> # Weighted mean using area weights
+    >>> ds = combine_cft_to_crop(ds, 'YIELD', 'YIELD_crop', method='mean',
+    ...                          weights='AREA')
     """
 
     da_grouped = ds[var_in].groupby(ds["cft_crop"])
 
+    # Handle weights if provided
+    if weights is not None:
+        # Get the weights DataArray
+        if isinstance(weights, str):
+            weights_da = ds[weights]
+        else:
+            weights_da = weights
+
+        # Ensure weights have the cft dimension
+        if "cft" not in weights_da.dims:
+            raise ValueError("Weights must have 'cft' dimension")
+
+    # For now, only implementing weighting for Xarray mean
+    weights_not_implemented_msg = (
+        "Weights are only supported for method='mean' (xarray groupby method)"
+    )
+
     # First, see if you can call the given method directly
     if callable(method):
+        if weights is not None:
+            raise NotImplementedError(weights_not_implemented_msg)
         da = method(**kwargs)
 
-    # Next, try to find the method in the Xarray DataArray
+    # Next, try to find the method in the Xarray DataArray groupby object
     elif hasattr(da_grouped, method) and callable(getattr(da_grouped, method)):
-        da = getattr(da_grouped, method)(dim="cft", **kwargs)
+        if weights is not None:
+            # Only support weights for 'mean' method
+            if method != "mean":
+                raise NotImplementedError(weights_not_implemented_msg)
+
+            # Weighted mean: sum(values * weights) / sum(weights)
+            weights_grouped = weights_da.groupby(ds["cft_crop"])
+            weighted_sum = (
+                (ds[var_in] * weights_da).groupby(ds["cft_crop"]).sum(dim="cft", **kwargs)
+            )
+            weight_sum = weights_grouped.sum(dim="cft", **kwargs)
+            da = weighted_sum / weight_sum
+        else:
+            da = getattr(da_grouped, method)(dim="cft", **kwargs)
 
     # Finally, check if it's a Numpy method
     elif hasattr(np, method) and callable(getattr(np, method)):
-        da = getattr(np, method)(**kwargs)
+        if weights is not None:
+            raise NotImplementedError(weights_not_implemented_msg)
+        da = da_grouped.apply(lambda x: getattr(np, method)(x.values, **kwargs))
 
     # If none of those worked, throw an error
     else:
