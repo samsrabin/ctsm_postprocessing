@@ -225,6 +225,15 @@ def combine_cft_to_crop(ds, var_in, var_out, method, weights=None, **kwargs):
     else:
         raise AttributeError(f"Method '{method}' not found")
 
-    ds[var_out] = da.rename({"cft_crop": "crop"})
+    try:
+        ds[var_out] = da.rename({"cft_crop": "crop"})
+    except ValueError as e:
+        if "the new name 'crop' conflicts" in str(e):
+            raise ValueError(
+                str(e)
+                + ". This is probably due to calling combine_cft_to_crop on a cft_ds that has"
+                + " already been sliced by crop."
+            ) from e
+        raise e
 
     return ds
