@@ -77,35 +77,44 @@ def _get_yield_and_croplevel_stats(case_ds):
 
 
 def _harvest_area_stats(case_ds):
+    # Get CFT planted area
     hr = case_ds["HARVEST_REASON_PERHARV"]
     cft_planted_area = (case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]).where(
         case_ds["pfts1d_wtgcell"] > 0,
     ) * 1e6  # convert km2 to m2
     cft_planted_area.attrs["units"] = "m2"
+
+    # Get CFT harvested area
     case_ds["cft_harv_area"] = (cft_planted_area * (hr > 0)).sum(dim="mxharvests")
+    case_ds["cft_harv_area"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["cft_harv_area_immature"] = (cft_planted_area * (hr > 1)).sum(
         dim="mxharvests",
     )
+    case_ds["cft_harv_area_immature"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["cft_harv_area_failed"] = (
         cft_planted_area * (1 - case_ds["VALID_HARVEST"]).where(hr > 0)
     ).sum(dim="mxharvests")
+    case_ds["cft_harv_area_failed"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["crop_harv_area"] = (
         case_ds["cft_harv_area"]
         .groupby(case_ds["cft_crop"])
         .sum(dim="cft")
         .rename({"cft_crop": "crop"})
     )
+    case_ds["crop_harv_area"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["crop_harv_area_immature"] = (
         case_ds["cft_harv_area_immature"]
         .groupby(case_ds["cft_crop"])
         .sum(dim="cft")
         .rename({"cft_crop": "crop"})
     )
+    case_ds["crop_harv_area_immature"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["crop_harv_area_failed"] = (
         case_ds["cft_harv_area_failed"]
         .groupby(case_ds["cft_crop"])
         .sum(dim="cft")
         .rename({"cft_crop": "crop"})
     )
+    case_ds["crop_harv_area_failed"].attrs["units"] = cft_planted_area.attrs["units"]
 
     return case_ds
