@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import os
 import sys
+import warnings
 from time import time
 
 try:
@@ -18,6 +19,13 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cropcase import CropCase
     from resolutions import identify_resolution
+
+# The variables needed for regridding
+REGRID_VARS = ["area", "landfrac", "landmask"]
+
+
+def _ds_has_regrid_vars(ds):
+    return all(v in ds.variables for v in REGRID_VARS)
 
 
 class CropCaseList(list):
@@ -41,7 +49,55 @@ class CropCaseList(list):
         self._import_cases(
             opts,
         )
-        self.resolutions = {case.cft_ds.attrs["resolution"] for case in self}
+
+        # Get resolutions and regrid-target Datasets
+        self.resolutions = {}
+        for case in self:
+            res = case.cft_ds.attrs["resolution"]
+
+            # Get minimum Dataset needed for regridding EarthStat to match
+            self._save_or_check_regrid_ds(case, res)
+
+    def _save_or_check_regrid_ds(self, case, res):
+        vars_to_drop = [v for v in case.cft_ds if v not in REGRID_VARS]
+        regrid_ds = case.cft_ds.drop_vars(vars_to_drop)
+
+        # Resolution not seen yet: Save regrid_ds
+        if res not in self.resolutions.keys():  # pylint: disable=consider-iterating-dictionary
+            self.resolutions[res] = regrid_ds
+
+        # Resolution already seen but doesn't have all needed vars, and this one does, replace
+        # saved one with this one
+        elif _ds_has_regrid_vars(regrid_ds) and not _ds_has_regrid_vars(self.resolutions[res]):
+            self.resolutions[res] = regrid_ds.compute()
+
+        # Resolution already seen: Check that it matches what we have saved
+        else:
+            self._check_regrid_ds(case, res, regrid_ds)
+
+    def _check_regrid_ds(self, case, res, regrid_ds):
+        saved_vars = set(self.resolutions[res].keys())
+        this_vars = set(regrid_ds.keys())
+
+        # Warn if this one is missing variable(s) present in saved one
+        if saved_vars != this_vars:
+            case_id_var = "case_id"
+            if case_id_var in self.resolutions[res].attrs:
+                saved_id = self.resolutions[res].attrs[case_id_var]
+            else:
+                saved_id = "saved regrid_ds"
+            warnings.warn(
+                f"Res {res}: {case.name} regrid_ds missing some variables present in {saved_id}",
+                UserWarning,
+            )
+
+        # Warn if any variables don't match what we saved
+        for var in saved_vars.intersection(this_vars):
+            if not self.resolutions[res][var].equals(regrid_ds[var]):
+                warnings.warn(
+                    f"Res {res} regrid_ds[{var}]: {case.name}[{var}] doesn't match",
+                    UserWarning,
+                )
 
     def _check_attrs_match(self, other):
         for attr in [a for a in dir(self) if not a.startswith("__")]:
