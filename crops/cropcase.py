@@ -390,9 +390,6 @@ class CropCase:
         """
         Get yield, marking non-viable harvests as zero and converting to wet matter
         """
-        if not any("_TO_FOOD_PERHARV" in v for v in cft_ds):
-            print("WARNING: Will not calculate yield because crop maturity can't be assessed")
-            return
 
         # Create DataArray with zeroes where harvest is invalid and ones elsewhere
         is_valid_harvest = mark_crops_invalid(cft_ds, min_viable_hui="isimip3")
@@ -422,28 +419,30 @@ class CropCase:
 
         # Calculate actual yield (wet matter)
         c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
-        if c_var in cft_ds:
-            wm_arr = np.full_like(cft_ds[c_var].values, np.nan)
-            for i, pft_int in enumerate(cft_ds["cft"].values):
-                pft_str = ivt_int2str(pft_int)
-                if cft_ds[c_var].dims[0] != "cft":
-                    raise NotImplementedError(
-                        "Below code (wm_arr[i]) assumes cft is the 0th dimension"
-                    )
-                wm_arr[i] = cft_ds[c_var].sel(cft=pft_int)
-                wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
-            cft_ds["YIELD_PERHARV"] = xr.DataArray(
-                data=wm_arr,
-                coords=cft_ds[c_var].coords,
-                dims=cft_ds[c_var].dims,
-                attrs={
-                    "long_name": "viable wet matter yield (minus losses) per harvest",
-                    "units": "g wet matter / m^2",
-                },
-            )
-            cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
-            long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
-            long_name = long_name.replace("per harvest", "per calendar year")
+        if c_var not in cft_ds:
+            print("WARNING: Will not calculate yield because crop maturity can't be assessed")
+            return
+        wm_arr = np.full_like(cft_ds[c_var].values, np.nan)
+        for i, pft_int in enumerate(cft_ds["cft"].values):
+            pft_str = ivt_int2str(pft_int)
+            if cft_ds[c_var].dims[0] != "cft":
+                raise NotImplementedError(
+                    "Below code (wm_arr[i]) assumes cft is the 0th dimension"
+                )
+            wm_arr[i] = cft_ds[c_var].sel(cft=pft_int)
+            wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
+        cft_ds["YIELD_PERHARV"] = xr.DataArray(
+            data=wm_arr,
+            coords=cft_ds[c_var].coords,
+            dims=cft_ds[c_var].dims,
+            attrs={
+                "long_name": "viable wet matter yield (minus losses) per harvest",
+                "units": "g wet matter / m^2",
+            },
+        )
+        cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
+        long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
+        long_name = long_name.replace("per harvest", "per calendar year")
 
     @classmethod
     def _create_empty(cls):
