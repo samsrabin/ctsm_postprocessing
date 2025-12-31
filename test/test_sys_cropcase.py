@@ -98,6 +98,11 @@ def check_crujra_matreqs_case_shared(this_case):
         msg = f"{var} is all zero"
         assert np.any(this_case.cft_ds[var] > 0), msg
 
+    # Ensure that all yield values have units
+    for var in derived_yield_var_list:
+        msg = f"{var} is missing units"
+        assert "units" in this_case.cft_ds[var].attrs, msg
+
     # Ensure that these derived variables have the right dims
     assert this_case.cft_ds["crop_cft_area"].dims == ("pft", "cft", "time")
     assert this_case.cft_ds["crop_area"].dims == ("pft", "crop", "time")
