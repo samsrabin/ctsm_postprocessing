@@ -88,6 +88,11 @@ def check_crujra_matreqs_case_shared(this_case):
         msg = f"{var} missing from cft_ds"
         assert var in this_case.cft_ds, msg
 
+    # Ensure that not all yield values are NaN
+    for var in derived_yield_var_list:
+        msg = f"{var} is all NaN"
+        assert not this_case.cft_ds[var].isnull().all(), msg
+
     # Ensure that not all yield values are zero
     for var in derived_yield_var_list:
         msg = f"{var} is all zero"
