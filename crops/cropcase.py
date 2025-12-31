@@ -415,7 +415,7 @@ class CropCase:
             # Get annual values
             new_var_ann = new_var.replace("PERHARV", "ANN")
             cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
-            cft_ds[new_var].attrs[
+            cft_ds[new_var_ann].attrs[
                 "long_name"
             ] = "grain C to food in VIABLE harvested organ per calendar year"
 
