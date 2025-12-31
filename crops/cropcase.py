@@ -399,24 +399,26 @@ class CropCase:
         cft_ds["VALID_HARVEST"] = is_valid_harvest
 
         # Mark invalid harvests as zero
-        for v in cft_ds:
-            if not re.match(r"GRAIN[CN]_TO_FOOD_PERHARV", v):
-                continue
+        product_list = ["FOOD", "SEED"]
+        for p in product_list:
+            for v in cft_ds:
+                if not re.match(fr"GRAIN[CN]_TO_{p}_PERHARV", v):
+                    continue
 
-            # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
-            new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
-            da_new = cft_ds[v] * is_valid_harvest
-            cft_ds[new_var] = da_new
-            cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
-            long_name = "grain C to food in VIABLE harvested organ per harvest"
-            cft_ds[new_var].attrs["long_name"] = long_name
+                # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
+                new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
+                da_new = cft_ds[v] * is_valid_harvest
+                cft_ds[new_var] = da_new
+                cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
+                long_name = f"grain C to {p.lower()} in VIABLE harvested organ per harvest"
+                cft_ds[new_var].attrs["long_name"] = long_name
 
-            # Get annual values
-            new_var_ann = new_var.replace("PERHARV", "ANN")
-            cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
-            cft_ds[new_var_ann].attrs[
-                "long_name"
-            ] = long_name.replace("per harvest", "per calendar year")
+                # Get annual values
+                new_var_ann = new_var.replace("PERHARV", "ANN")
+                cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
+                cft_ds[new_var_ann].attrs[
+                    "long_name"
+                ] = long_name.replace("per harvest", "per calendar year")
 
         # Calculate actual yield (wet matter)
         c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
