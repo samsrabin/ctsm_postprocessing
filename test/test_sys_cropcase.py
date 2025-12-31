@@ -83,14 +83,15 @@ def check_crujra_matreqs_case_shared(this_case):
     ]
 
     # Ensure that derived variables are present.
-    assert "GRAINC_TO_FOOD_VIABLE_PERHARV" in this_case.cft_ds
-    assert "YIELD_PERHARV" in this_case.cft_ds
-    assert "YIELD_ANN" in this_case.cft_ds
+    derived_yield_var_list = ["GRAINC_TO_FOOD_VIABLE_PERHARV", "YIELD_PERHARV", "YIELD_ANN"]
+    for var in derived_yield_var_list:
+        msg = f"{var} missing from cft_ds"
+        assert var in this_case.cft_ds, msg
 
     # Ensure that not all yield values are zero
-    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_VIABLE_PERHARV"] > 0)
-    assert np.any(this_case.cft_ds["YIELD_PERHARV"] > 0)
-    assert np.any(this_case.cft_ds["YIELD_ANN"] > 0)
+    for var in derived_yield_var_list:
+        msg = f"{var} is all zero"
+        assert np.any(this_case.cft_ds[var] > 0), msg
 
     # Ensure that these derived variables have the right dims
     assert this_case.cft_ds["crop_cft_area"].dims == ("pft", "cft", "time")
