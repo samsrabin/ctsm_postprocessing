@@ -220,6 +220,17 @@ class CropCase:
         if hasattr(self.cft_ds["cft_crop"].data, "compute"):
             self.cft_ds["cft_crop"] = self.cft_ds["cft_crop"].compute()
 
+        # At some point I changed "viable"/"valid" harvest variable names to "usable". cft_ds
+        # variables saved before that need to be renamed to match.
+        rename_dict = {}
+        for v in self.cft_ds:
+            if v == "VALID_HARVEST":
+                rename_dict[v] = "USABLE_HARVEST"
+            elif "VIABLE" in v:
+                rename_dict[v] = v.replace("VIABLE", "USABLE")
+        if rename_dict:
+            self.cft_ds = self.cft_ds.rename(rename_dict)
+
     def __eq__(self, other):
         # Check that they're both CropCases
         if not isinstance(other, self.__class__):
@@ -369,7 +380,7 @@ class CropCase:
             end = time()
             print(f"Secondary variables took {int(end - start)} s")
 
-        # Get yield, marking non-viable harvests as zero and converting to wet matter
+        # Get yield, marking non-usable harvests as zero and converting to wet matter
         self.get_yield(cft_ds)
 
         # Get gridcell land area
@@ -388,12 +399,12 @@ class CropCase:
 
     def get_yield(self, cft_ds):
         """
-        Get yield, marking non-viable harvests as zero and converting to wet matter
+        Get yield, marking non-usable harvests as zero and converting to wet matter
         """
 
-        # Create DataArray with zeroes where harvest is invalid and ones elsewhere
-        is_valid_harvest = mark_crops_invalid(cft_ds, min_viable_hui="isimip3")
-        cft_ds["VALID_HARVEST"] = is_valid_harvest
+        # Create DataArray with zeroes where harvest is not usable (shouldn't be included in our
+        # standard postprocessed yield) and ones elsewhere
+        cft_ds["USABLE_HARVEST"] = mark_crops_invalid(cft_ds, min_viable_hui="isimip3")
 
         # Mark invalid harvests as zero
         product_list = ["FOOD", "SEED"]
@@ -403,11 +414,11 @@ class CropCase:
                     continue
 
                 # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
-                new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
-                da_new = cft_ds[v] * is_valid_harvest
+                new_var = v.replace("_PERHARV", "_USABLE_PERHARV")
+                da_new = cft_ds[v] * cft_ds["USABLE_HARVEST"]
                 cft_ds[new_var] = da_new
                 cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
-                long_name = f"grain C to {p.lower()} in VIABLE harvested organ per harvest"
+                long_name = f"grain C to {p.lower()} in USABLE harvested organ per harvest"
                 cft_ds[new_var].attrs["long_name"] = long_name
 
                 # Get annual values
@@ -418,7 +429,7 @@ class CropCase:
                 ] = long_name.replace("per harvest", "per calendar year")
 
         # Calculate actual yield (wet matter)
-        c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
+        c_var = "GRAINC_TO_FOOD_USABLE_PERHARV"
         if c_var not in cft_ds:
             print("WARNING: Will not calculate yield because crop maturity can't be assessed")
             return
@@ -436,7 +447,7 @@ class CropCase:
             coords=cft_ds[c_var].coords,
             dims=cft_ds[c_var].dims,
             attrs={
-                "long_name": "viable wet matter yield (minus losses) per harvest",
+                "long_name": "usable wet matter yield (minus losses) per harvest",
                 "units": "g wet matter / m^2",
             },
         )
