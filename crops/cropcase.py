@@ -408,16 +408,15 @@ class CropCase:
             da_new = cft_ds[v] * is_valid_harvest
             cft_ds[new_var] = da_new
             cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
-            cft_ds[new_var].attrs[
-                "long_name"
-            ] = "grain C to food in VIABLE harvested organ per harvest"
+            long_name = "grain C to food in VIABLE harvested organ per harvest"
+            cft_ds[new_var].attrs["long_name"] = long_name
 
             # Get annual values
             new_var_ann = new_var.replace("PERHARV", "ANN")
             cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
             cft_ds[new_var_ann].attrs[
                 "long_name"
-            ] = "grain C to food in VIABLE harvested organ per calendar year"
+            ] = long_name.replace("per harvest", "per calendar year")
 
         # Calculate actual yield (wet matter)
         c_var = "GRAINC_TO_FOOD_VIABLE_PERHARV"
