@@ -407,6 +407,7 @@ class CropCase:
             new_var = v.replace("_PERHARV", "_VIABLE_PERHARV")
             da_new = cft_ds[v] * is_valid_harvest
             cft_ds[new_var] = da_new
+            cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
             cft_ds[new_var].attrs[
                 "long_name"
             ] = "grain C to food in VIABLE harvested organ per harvest"
@@ -439,7 +440,9 @@ class CropCase:
                     "units": "g wet matter / m^2",
                 },
             )
-            cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests")
+            cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
+            long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
+            long_name = long_name.replace("per harvest", "per calendar year")
 
     @classmethod
     def _create_empty(cls):
