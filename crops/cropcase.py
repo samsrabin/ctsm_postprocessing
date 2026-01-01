@@ -380,8 +380,8 @@ class CropCase:
             end = time()
             print(f"Secondary variables took {int(end - start)} s")
 
-        # Get yield, marking non-usable harvests as zero and converting to wet matter
-        self.get_yield(cft_ds)
+        # Postprocess crop products
+        self.get_crop_products(cft_ds)
 
         # Get gridcell land area
         cft_ds.load()
@@ -397,41 +397,50 @@ class CropCase:
 
         return cft_ds
 
-    def get_yield(self, cft_ds):
+    def get_crop_products(self, cft_ds):
         """
-        Get yield, marking non-usable harvests as zero and converting to wet matter
+        Get crop products for various levels of maturity
         """
 
-        # Create DataArray with zeroes where harvest is not usable (shouldn't be included in our
-        # standard postprocessed yield) and ones elsewhere
-        cft_ds["USABLE_HARVEST"] = mark_crops_invalid(cft_ds, min_viable_hui="isimip3")
+        # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
+        maturity_levels = {
+            "USABLE": "isimip3",
+            "MATURE": 1.0,
+        }
 
-        # Mark invalid harvests as zero
-        product_list = ["FOOD", "SEED"]
-        for p in product_list:
-            for v in cft_ds:
-                if not re.match(fr"GRAIN[CN]_TO_{p}_PERHARV", v):
-                    continue
+        for m, min_viable_hui in maturity_levels.items():
 
-                # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
-                new_var = v.replace("_PERHARV", "_USABLE_PERHARV")
-                da_new = cft_ds[v] * cft_ds["USABLE_HARVEST"]
-                cft_ds[new_var] = da_new
-                cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
-                long_name = f"grain C to {p.lower()} in USABLE harvested organ per harvest"
-                cft_ds[new_var].attrs["long_name"] = long_name
+            # Create DataArray with zeroes where harvest is not viable (shouldn't be included in our
+            # postprocessed yield) and ones elsewhere
+            viable_harv_var = f"{m}_HARVEST"
+            cft_ds[viable_harv_var] = mark_crops_invalid(cft_ds, min_viable_hui=min_viable_hui)
 
-                # Get annual values
-                new_var_ann = new_var.replace("PERHARV", "ANN")
-                cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
-                cft_ds[new_var_ann].attrs[
-                    "long_name"
-                ] = long_name.replace("per harvest", "per calendar year")
+            # Mark invalid harvests as zero
+            product_list = ["FOOD", "SEED"]
+            for p in product_list:
+                for v in cft_ds:
+                    if not re.match(fr"GRAIN[CN]_TO_{p}_PERHARV", v):
+                        continue
 
-        # Calculate actual yield (wet matter)
+                    # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
+                    new_var = v.replace("_PERHARV", f"_{m}_PERHARV")
+                    da_new = cft_ds[v] * cft_ds[viable_harv_var]
+                    cft_ds[new_var] = da_new
+                    cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
+                    long_name = f"grain C to {p.lower()} in {m} harvested organ per harvest"
+                    cft_ds[new_var].attrs["long_name"] = long_name
+
+                    # Get annual values
+                    new_var_ann = new_var.replace("PERHARV", "ANN")
+                    cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
+                    cft_ds[new_var_ann].attrs[
+                        "long_name"
+                    ] = long_name.replace("per harvest", "per calendar year")
+
+        # Calculate actual yield (wet matter) based on "usable" harvests
         c_var = "GRAINC_TO_FOOD_USABLE_PERHARV"
         if c_var not in cft_ds:
-            print("WARNING: Will not calculate yield because crop maturity can't be assessed")
+            print(f"WARNING: Will not calculate yield because {c_var} not in cft_ds")
             return
         wm_arr = np.full_like(cft_ds[c_var].values, np.nan)
         for i, pft_int in enumerate(cft_ds["cft"].values):
