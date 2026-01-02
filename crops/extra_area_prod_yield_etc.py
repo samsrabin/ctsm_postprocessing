@@ -90,26 +90,7 @@ def _get_crop_products(cft_ds):
         cft_ds[viable_harv_var] = mark_crops_invalid(cft_ds, min_viable_hui=min_viable_hui)
 
         # Mark invalid harvests as zero
-        product_list = ["FOOD", "SEED"]
-        for p in product_list:
-            for v in cft_ds:
-                if not re.match(rf"GRAIN[CN]_TO_{p}_PERHARV", v):
-                    continue
-
-                # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
-                new_var = v.replace("_PERHARV", f"_{m}_PERHARV")
-                da_new = cft_ds[v] * cft_ds[viable_harv_var]
-                cft_ds[new_var] = da_new
-                cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
-                long_name = f"grain C to {p.lower()} in {m} harvested organ per harvest"
-                cft_ds[new_var].attrs["long_name"] = long_name
-
-                # Get annual values
-                new_var_ann = new_var.replace("PERHARV", "ANN")
-                cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
-                cft_ds[new_var_ann].attrs["long_name"] = long_name.replace(
-                    "per harvest", "per calendar year"
-                )
+        cft_ds = _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var)
 
     # Calculate actual yield (wet matter) based on "marketable" harvests
     c_var = "GRAINC_TO_FOOD_MARKETABLE_PERHARV"
@@ -135,6 +116,30 @@ def _get_crop_products(cft_ds):
     cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
     long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
     long_name = long_name.replace("per harvest", "per calendar year")
+    return cft_ds
+
+
+def _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var):
+    product_list = ["FOOD", "SEED"]
+    for p in product_list:
+        for v in cft_ds:
+            if not re.match(rf"GRAIN[CN]_TO_{p}_PERHARV", v):
+                continue
+
+            # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_MARKETABLE_PERHARV
+            new_var = v.replace("_PERHARV", f"_{m}_PERHARV")
+            da_new = cft_ds[v] * cft_ds[viable_harv_var]
+            cft_ds[new_var] = da_new
+            cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
+            long_name = f"grain C to {p.lower()} in {m} harvested organ per harvest"
+            cft_ds[new_var].attrs["long_name"] = long_name
+
+            # Get annual values
+            new_var_ann = new_var.replace("PERHARV", "ANN")
+            cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
+            cft_ds[new_var_ann].attrs["long_name"] = long_name.replace(
+                "per harvest", "per calendar year"
+            )
     return cft_ds
 
 
