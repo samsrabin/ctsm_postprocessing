@@ -404,6 +404,7 @@ class CropCase:
 
         # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
         maturity_levels = {
+            "ANY": 0.0,
             "MARKETABLE": "isimip3",
             "MATURE": 1.0,
         }
