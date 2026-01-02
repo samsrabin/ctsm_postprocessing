@@ -5,16 +5,32 @@ Calculate some extra area, prod, yield, etc. variables
 # TODO: Move this to CropCase?
 from __future__ import annotations
 
+import re
+import sys
+import os
+
 import numpy as np
 import xarray as xr
 
-from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
+try:
+    from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
+    from .mark_crops_invalid import mark_crops_invalid
+    from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
+except ImportError:
+    # Fallback to absolute import if running as a script
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from crops.combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
+    from crops.mark_crops_invalid import mark_crops_invalid
+    from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     """
     Calculate some extra area, prod, yield, etc. variables
     """
+
+    # Get crop products at various levels of maturity
+    case_ds = _get_crop_products(case_ds)
 
     # Calculate CFT area
     case_ds["cft_area"] = case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]
@@ -52,6 +68,74 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     case_ds = case_ds.drop_vars(["cft_area", "cft_prod"])
 
     return case_ds
+
+
+def _get_crop_products(cft_ds):
+    """
+    Get crop products for various levels of maturity
+    """
+
+    # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
+    maturity_levels = {
+        "ANY": 0.0,
+        "MARKETABLE": "isimip3",
+        "MATURE": 1.0,
+    }
+
+    for m, min_viable_hui in maturity_levels.items():
+
+        # Create DataArray with zeroes where harvest is not viable (shouldn't be included in our
+        # postprocessed yield) and ones elsewhere
+        viable_harv_var = f"{m}_HARVEST"
+        cft_ds[viable_harv_var] = mark_crops_invalid(cft_ds, min_viable_hui=min_viable_hui)
+
+        # Mark invalid harvests as zero
+        product_list = ["FOOD", "SEED"]
+        for p in product_list:
+            for v in cft_ds:
+                if not re.match(rf"GRAIN[CN]_TO_{p}_PERHARV", v):
+                    continue
+
+                # Change, e.g., GRAINC_TO_FOOD_PERHARV to GRAINC_TO_FOOD_PERHARV
+                new_var = v.replace("_PERHARV", f"_{m}_PERHARV")
+                da_new = cft_ds[v] * cft_ds[viable_harv_var]
+                cft_ds[new_var] = da_new
+                cft_ds[new_var].attrs["units"] = cft_ds[v].attrs["units"]
+                long_name = f"grain C to {p.lower()} in {m} harvested organ per harvest"
+                cft_ds[new_var].attrs["long_name"] = long_name
+
+                # Get annual values
+                new_var_ann = new_var.replace("PERHARV", "ANN")
+                cft_ds[new_var_ann] = cft_ds[new_var].sum(dim="mxharvests")
+                cft_ds[new_var_ann].attrs["long_name"] = long_name.replace(
+                    "per harvest", "per calendar year"
+                )
+
+    # Calculate actual yield (wet matter) based on "marketable" harvests
+    c_var = "GRAINC_TO_FOOD_MARKETABLE_PERHARV"
+    if c_var not in cft_ds:
+        print(f"WARNING: Will not calculate yield because {c_var} not in cft_ds")
+        return cft_ds
+    wm_arr = np.full_like(cft_ds[c_var].values, np.nan)
+    for i, pft_int in enumerate(cft_ds["cft"].values):
+        pft_str = ivt_int2str(pft_int)
+        if cft_ds[c_var].dims[0] != "cft":
+            raise NotImplementedError("Below code (wm_arr[i]) assumes cft is the 0th dimension")
+        wm_arr[i] = cft_ds[c_var].sel(cft=pft_int)
+        wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
+    cft_ds["YIELD_PERHARV"] = xr.DataArray(
+        data=wm_arr,
+        coords=cft_ds[c_var].coords,
+        dims=cft_ds[c_var].dims,
+        attrs={
+            "long_name": "marketable wet matter yield (minus losses) per harvest",
+            "units": "g wet matter / m^2",
+        },
+    )
+    cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
+    long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
+    long_name = long_name.replace("per harvest", "per calendar year")
+    return cft_ds
 
 
 def _get_yield_and_croplevel_stats(case_ds):
