@@ -83,7 +83,7 @@ def check_crujra_matreqs_case_shared(this_case):
     ]
 
     # Ensure that derived variables are present.
-    derived_yield_var_list = ["GRAINC_TO_FOOD_USABLE_PERHARV", "YIELD_PERHARV", "YIELD_ANN"]
+    derived_yield_var_list = ["GRAINC_TO_FOOD_MARKETABLE_PERHARV", "YIELD_PERHARV", "YIELD_ANN"]
     for var in derived_yield_var_list:
         msg = f"{var} missing from cft_ds"
         assert var in this_case.cft_ds, msg
@@ -167,12 +167,12 @@ def test_setup_cropcase_noperms(tmp_path):
     assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Ensure that derived variables are present.
-    assert "GRAINC_TO_FOOD_USABLE_PERHARV" in this_case.cft_ds
+    assert "GRAINC_TO_FOOD_MARKETABLE_PERHARV" in this_case.cft_ds
     assert "YIELD_PERHARV" in this_case.cft_ds
     assert "YIELD_ANN" in this_case.cft_ds
 
     # Ensure that not all yield values are zero
-    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_USABLE_PERHARV"] > 0)
+    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_MARKETABLE_PERHARV"] > 0)
     assert np.any(this_case.cft_ds["YIELD_PERHARV"] > 0)
     assert np.any(this_case.cft_ds["YIELD_ANN"] > 0)
 
@@ -210,7 +210,7 @@ def test_setup_cropcase_nofile(tmp_path):
     assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
     # Ensure that at least one derived variable is present.
-    assert "GRAINC_TO_FOOD_USABLE_PERHARV" in this_case.cft_ds
+    assert "GRAINC_TO_FOOD_MARKETABLE_PERHARV" in this_case.cft_ds
 
     # Ensure file wasn't saved
     assert not os.path.exists(os.path.join(temp_dir, CFT_DS_FILENAME))

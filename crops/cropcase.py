@@ -220,14 +220,14 @@ class CropCase:
         if hasattr(self.cft_ds["cft_crop"].data, "compute"):
             self.cft_ds["cft_crop"] = self.cft_ds["cft_crop"].compute()
 
-        # At some point I changed "viable"/"valid" harvest variable names to "usable". cft_ds
+        # At some point I changed "viable"/"valid" harvest variable names to "marketable". cft_ds
         # variables saved before that need to be renamed to match.
         rename_dict = {}
         for v in self.cft_ds:
             if v == "VALID_HARVEST":
-                rename_dict[v] = "USABLE_HARVEST"
+                rename_dict[v] = "MARKETABLE_HARVEST"
             elif "VIABLE" in v:
-                rename_dict[v] = v.replace("VIABLE", "USABLE")
+                rename_dict[v] = v.replace("VIABLE", "MARKETABLE")
         if rename_dict:
             self.cft_ds = self.cft_ds.rename(rename_dict)
 
@@ -404,7 +404,7 @@ class CropCase:
 
         # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
         maturity_levels = {
-            "USABLE": "isimip3",
+            "MARKETABLE": "isimip3",
             "MATURE": 1.0,
         }
 
@@ -437,8 +437,8 @@ class CropCase:
                         "long_name"
                     ] = long_name.replace("per harvest", "per calendar year")
 
-        # Calculate actual yield (wet matter) based on "usable" harvests
-        c_var = "GRAINC_TO_FOOD_USABLE_PERHARV"
+        # Calculate actual yield (wet matter) based on "marketable" harvests
+        c_var = "GRAINC_TO_FOOD_MARKETABLE_PERHARV"
         if c_var not in cft_ds:
             print(f"WARNING: Will not calculate yield because {c_var} not in cft_ds")
             return
@@ -456,7 +456,7 @@ class CropCase:
             coords=cft_ds[c_var].coords,
             dims=cft_ds[c_var].dims,
             attrs={
-                "long_name": "usable wet matter yield (minus losses) per harvest",
+                "long_name": "marketable wet matter yield (minus losses) per harvest",
                 "units": "g wet matter / m^2",
             },
         )

@@ -92,7 +92,7 @@ def _harvest_area_stats(case_ds):
     )
     case_ds["cft_harv_area_immature"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["cft_harv_area_failed"] = (
-        cft_planted_area * (1 - case_ds["USABLE_HARVEST"]).where(hr > 0)
+        cft_planted_area * (1 - case_ds["MARKETABLE_HARVEST"]).where(hr > 0)
     ).sum(dim="mxharvests")
     case_ds["cft_harv_area_failed"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["crop_harv_area"] = (

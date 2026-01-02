@@ -19,7 +19,7 @@ except ImportError:
     from crops.crop_secondary_variables import _handle_huifrac_where_gddharv_notpos
     from utils import ivt_int2str
 
-# Minimum usable HUI under ISIMIP3-Agriculture protocol
+# Minimum marketable HUI under ISIMIP3-Agriculture protocol
 MIN_HUIFRAC_CORN_ISIMIP3 = 0.8  # Lower than other crops to account for silage maize harvest
 MIN_HUIFRAC_OTHER_ISIMIP3 = 0.9
 
