@@ -93,7 +93,13 @@ def _get_crop_products(cft_ds):
         cft_ds = _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var)
 
     # Calculate actual yield (wet matter) based on "marketable" harvests
-    c_var = "GRAINC_TO_FOOD_MARKETABLE_PERHARV"
+    m = "MARKETABLE"
+    cft_ds = _get_yield(cft_ds, m)
+    return cft_ds
+
+
+def _get_yield(cft_ds, m):
+    c_var = f"GRAINC_TO_FOOD_{m}_PERHARV"
     if c_var not in cft_ds:
         print(f"WARNING: Will not calculate yield because {c_var} not in cft_ds")
         return cft_ds
@@ -109,7 +115,7 @@ def _get_crop_products(cft_ds):
         coords=cft_ds[c_var].coords,
         dims=cft_ds[c_var].dims,
         attrs={
-            "long_name": "marketable wet matter yield (minus losses) per harvest",
+            "long_name": f"{m} wet matter yield (minus losses) per harvest",
             "units": "g wet matter / m^2",
         },
     )
