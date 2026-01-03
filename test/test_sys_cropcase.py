@@ -17,6 +17,7 @@ try:
     from ..cropcase import CropCase, CFT_DS_FILENAME
     from ..crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
     from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
+    from ..extra_area_prod_yield_etc import MATURITY_LEVELS
 except ImportError:
     # Fallback to absolute import if running as a script
     # Add both the parent directory (for crops module) and grandparent (for test module)
@@ -26,6 +27,7 @@ except ImportError:
     sys.path.insert(0, grandparent_dir)
     from crops.cropcase import CropCase, CFT_DS_FILENAME
     from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from crops.extra_area_prod_yield_etc import MATURITY_LEVELS
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
 
@@ -83,45 +85,59 @@ def check_crujra_matreqs_case_shared(this_case):
     ]
 
     # Ensure that derived variables are present.
-    derived_yield_var_list = ["GRAINC_TO_FOOD_MARKETABLE_PERHARV", "YIELD_PERHARV", "YIELD_ANN"]
-    for var in derived_yield_var_list:
-        msg = f"{var} missing from cft_ds"
-        assert var in this_case.cft_ds, msg
+    for m in MATURITY_LEVELS:
+        derived_yield_var_list = [
+            f"GRAINC_TO_FOOD_{m}_PERHARV",
+            f"YIELD_{m}_PERHARV",
+            f"YIELD_{m}_ANN",
+        ]
+        for var in derived_yield_var_list:
+            msg = f"{var} missing from cft_ds"
+            assert var in this_case.cft_ds, msg
 
-    # Ensure that not all yield values are NaN
-    for var in derived_yield_var_list:
-        msg = f"{var} is all NaN"
-        assert not this_case.cft_ds[var].isnull().all(), msg
+        # Ensure that not all yield values are NaN
+        for var in derived_yield_var_list:
+            msg = f"{var} is all NaN"
+            assert not this_case.cft_ds[var].isnull().all(), msg
 
-    # Ensure that not all yield values are zero
-    for var in derived_yield_var_list:
-        msg = f"{var} is all zero"
-        assert np.any(this_case.cft_ds[var] > 0), msg
+        # Ensure that not all yield values are zero
+        for var in derived_yield_var_list:
+            msg = f"{var} is all zero"
+            assert np.any(this_case.cft_ds[var] > 0), msg
 
-    # Ensure that all yield values have units
-    for var in derived_yield_var_list:
-        msg = f"{var} is missing units"
-        assert "units" in this_case.cft_ds[var].attrs, msg
+        # Ensure that all yield values have units
+        for var in derived_yield_var_list:
+            msg = f"{var} is missing units"
+            assert "units" in this_case.cft_ds[var].attrs, msg
+
+        # Ensure that NaN values are handled correctly.
+        # First, ensure that there are actually some NaN values that will be tested.
+        assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
+        assert np.any(np.isnan(this_case.cft_ds[f"GRAINC_TO_FOOD_{m}_PERHARV"]))
+        assert np.any(np.isnan(this_case.cft_ds[f"YIELD_{m}_PERHARV"]))
+        # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
+        # doesn't have any NaN values.
+        assert not np.any(np.isnan(this_case.cft_ds[f"YIELD_{m}_ANN"]))
 
     # Ensure that these derived variables have the right dims
     assert this_case.cft_ds["crop_cft_area"].dims == ("pft", "cft", "time")
     assert this_case.cft_ds["crop_area"].dims == ("pft", "crop", "time")
 
-    # Ensure that NaN values are handled correctly.
-    # First, ensure that there are actually some NaN values that will be tested.
-    assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
-    assert np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"]))
-    # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
-    # doesn't have any NaN values.
-    assert not np.any(np.isnan(this_case.cft_ds["YIELD_ANN"]))
-
     # Ensure that values of some derived variables are correct
     assert this_case.cft_ds["crop_cft_area"].mean().values == pytest.approx(379009483.9427163)
-    assert this_case.cft_ds["crop_cft_prod"].mean().values == pytest.approx(198672315418.34564)
-    assert this_case.cft_ds["crop_cft_yield"].mean().values == pytest.approx(602.2368436177571)
+    assert this_case.cft_ds["crop_cft_prod_marketable"].mean().values == pytest.approx(
+        198672315418.34564
+    )
+    assert this_case.cft_ds["crop_cft_yield_marketable"].mean().values == pytest.approx(
+        602.2368436177571
+    )
     assert this_case.cft_ds["crop_area"].mean().values == pytest.approx(1010691957.180577)
-    assert this_case.cft_ds["crop_prod"].mean().values == pytest.approx(529792841115.5884)
-    assert this_case.cft_ds["crop_yield"].mean().values == pytest.approx(568.3093914610291)
+    assert this_case.cft_ds["crop_prod_marketable"].mean().values == pytest.approx(
+        529792841115.5884
+    )
+    assert this_case.cft_ds["crop_yield_marketable"].mean().values == pytest.approx(
+        568.3093914610291
+    )
 
 
 def test_setup_cropcase(cropcase):
@@ -166,23 +182,25 @@ def test_setup_cropcase_noperms(tmp_path):
     )
     assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
 
-    # Ensure that derived variables are present.
-    assert "GRAINC_TO_FOOD_MARKETABLE_PERHARV" in this_case.cft_ds
-    assert "YIELD_PERHARV" in this_case.cft_ds
-    assert "YIELD_ANN" in this_case.cft_ds
+    for m in MATURITY_LEVELS:
+        # Ensure that derived variables are present.
+        assert f"GRAINC_TO_FOOD_{m}_PERHARV" in this_case.cft_ds
+        assert f"YIELD_{m}_PERHARV" in this_case.cft_ds
+        assert f"YIELD_{m}_ANN" in this_case.cft_ds
 
-    # Ensure that not all yield values are zero
-    assert np.any(this_case.cft_ds["GRAINC_TO_FOOD_MARKETABLE_PERHARV"] > 0)
-    assert np.any(this_case.cft_ds["YIELD_PERHARV"] > 0)
-    assert np.any(this_case.cft_ds["YIELD_ANN"] > 0)
+        # Ensure that not all yield values are zero
+        assert np.any(this_case.cft_ds[f"GRAINC_TO_FOOD_{m}_PERHARV"] > 0)
+        assert np.any(this_case.cft_ds[f"YIELD_{m}_PERHARV"] > 0)
+        assert np.any(this_case.cft_ds[f"YIELD_{m}_ANN"] > 0)
 
-    # Ensure that NaN values are handled correctly.
-    # First, ensure that there are actually some NaN values that will be tested.
-    assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
-    assert np.any(np.isnan(this_case.cft_ds["YIELD_PERHARV"]))
-    # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
-    # doesn't have any NaN values.
-    assert not np.any(np.isnan(this_case.cft_ds["YIELD_ANN"]))
+        # Ensure that NaN values are handled correctly.
+        # First, ensure that there are actually some NaN values that will be tested.
+        assert np.any(np.isnan(this_case.cft_ds["GRAINC_TO_FOOD_PERHARV"]))
+        assert np.any(np.isnan(this_case.cft_ds[f"GRAINC_TO_FOOD_{m}_PERHARV"]))
+        assert np.any(np.isnan(this_case.cft_ds[f"YIELD_{m}_PERHARV"]))
+        # Now test that YIELD_ANN, which is just YIELD_PERHARV summed over the mxharvests dimension,
+        # doesn't have any NaN values.
+        assert not np.any(np.isnan(this_case.cft_ds[f"YIELD_{m}_ANN"]))
 
     # Check that we only have 3 years in the dataset
     assert this_case.cft_ds.sizes["time"] == 3

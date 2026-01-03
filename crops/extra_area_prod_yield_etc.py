@@ -23,6 +23,13 @@ except ImportError:
     from crops.mark_crops_invalid import mark_crops_invalid
     from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
+# Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
+MATURITY_LEVELS = {
+    "ANY": 0.0,
+    "MARKETABLE": "isimip3",
+    "MATURE": 1.0,
+}
+
 
 def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     """
@@ -36,36 +43,42 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     case_ds["cft_area"] = case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]
     case_ds["cft_area"] *= 1e6  # Convert km2 to m2
     case_ds["cft_area"].attrs["units"] = "m2"
-    crop_cft_area_da = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_area")
+    case_ds["crop_cft_area"] = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_area")
 
-    # Calculate CFT production
-    case_ds["cft_prod"] = case_ds["YIELD_ANN"] * case_ds["cft_area"]
-    crop_cft_prod_da = get_all_cft_crop_das(crops_to_include, case, case_ds, "cft_prod")
+    for i, m in enumerate(MATURITY_LEVELS):
 
-    # Convert/set units
-    crop_cft_prod_da.attrs["units"] = "g"
+        # Calculate CFT production
+        cft_prod_var = f"cft_prod_{m.lower()}"
+        case_ds[cft_prod_var] = case_ds[f"YIELD_{m.upper()}_ANN"] * case_ds["cft_area"]
+        crop_cft_prod_da = get_all_cft_crop_das(crops_to_include, case, case_ds, cft_prod_var)
 
-    # Save cft_crop variable
-    cft_crop_da = get_cft_crop_da(crops_to_include, case, case_ds)
-    case_ds["cft_crop"] = cft_crop_da
+        # Convert/set units
+        crop_cft_prod_da.attrs["units"] = "g"
 
-    # cft_crop is often a groupby() variable, so computing it makes things more efficient.
-    # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
-    if hasattr(case_ds["cft_crop"].data, "compute"):
-        case_ds["cft_crop"] = case_ds["cft_crop"].compute()
+        # Save cft_crop variable
+        if i == 0:
+            cft_crop_da = get_cft_crop_da(crops_to_include, case, case_ds)
+            case_ds["cft_crop"] = cft_crop_da
 
-    # Add crop_cft_* variables to case_ds
-    case_ds["crop_cft_area"] = crop_cft_area_da
-    case_ds["crop_cft_prod"] = crop_cft_prod_da
+            # cft_crop is often a groupby() variable, so computing it makes things more efficient.
+            # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
+            if hasattr(case_ds["cft_crop"].data, "compute"):
+                case_ds["cft_crop"] = case_ds["cft_crop"].compute()
 
-    # Calculate CFT-level yield
-    case_ds = _get_yield_and_croplevel_stats(case_ds)
+        # Add to case_ds
+        case_ds[f"crop_cft_prod_{m.lower()}"] = crop_cft_prod_da
 
-    # Area harvested
-    case_ds = _harvest_area_stats(case_ds)
+        # Calculate CFT-level yield
+        case_ds = _get_yield_and_croplevel_stats(case_ds, m)
+
+        # Area harvested
+        case_ds = _harvest_area_stats(case_ds)
+
+        # Drop things we don't need anymore
+        case_ds = case_ds.drop_vars(cft_prod_var)
 
     # Drop things we don't need anymore
-    case_ds = case_ds.drop_vars(["cft_area", "cft_prod"])
+    case_ds = case_ds.drop_vars("cft_area")
 
     return case_ds
 
@@ -75,14 +88,7 @@ def _get_crop_products(cft_ds):
     Get crop products for various levels of maturity
     """
 
-    # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
-    maturity_levels = {
-        "ANY": 0.0,
-        "MARKETABLE": "isimip3",
-        "MATURE": 1.0,
-    }
-
-    for m, min_viable_hui in maturity_levels.items():
+    for m, min_viable_hui in MATURITY_LEVELS.items():
 
         # Create DataArray with zeroes where harvest is not viable (shouldn't be included in our
         # postprocessed yield) and ones elsewhere
@@ -93,8 +99,9 @@ def _get_crop_products(cft_ds):
         cft_ds = _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var)
 
     # Calculate actual yield (wet matter) based on "marketable" harvests
-    m = "MARKETABLE"
-    cft_ds = _get_yield(cft_ds, m)
+    for m in MATURITY_LEVELS:
+        cft_ds = _get_yield(cft_ds, m)
+
     return cft_ds
 
 
@@ -110,7 +117,9 @@ def _get_yield(cft_ds, m):
             raise NotImplementedError("Below code (wm_arr[i]) assumes cft is the 0th dimension")
         wm_arr[i] = cft_ds[c_var].sel(cft=pft_int)
         wm_arr[i] = food_grainc_to_harvested_tons_onecrop(wm_arr[i], pft_str)
-    cft_ds["YIELD_PERHARV"] = xr.DataArray(
+
+    var_perharv = f"YIELD_{m}_PERHARV"
+    cft_ds[var_perharv] = xr.DataArray(
         data=wm_arr,
         coords=cft_ds[c_var].coords,
         dims=cft_ds[c_var].dims,
@@ -119,8 +128,10 @@ def _get_yield(cft_ds, m):
             "units": "g wet matter / m^2",
         },
     )
-    cft_ds["YIELD_ANN"] = cft_ds["YIELD_PERHARV"].sum(dim="mxharvests", keep_attrs=True)
-    long_name = cft_ds["YIELD_ANN"].attrs["long_name"]
+
+    var_ann = var_perharv.replace("PERHARV", "ANN")
+    cft_ds[var_ann] = cft_ds[var_perharv].sum(dim="mxharvests", keep_attrs=True)
+    long_name = cft_ds[var_ann].attrs["long_name"]
     long_name = long_name.replace("per harvest", "per calendar year")
     return cft_ds
 
@@ -149,23 +160,27 @@ def _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var):
     return cft_ds
 
 
-def _get_yield_and_croplevel_stats(case_ds):
+def _get_yield_and_croplevel_stats(case_ds, m):
     """
     Calculate yield, then consolidate CFT-level stats to crop-level
     """
-    case_ds["crop_cft_yield"] = case_ds["crop_cft_prod"] / case_ds["crop_cft_area"]
-    case_ds["crop_cft_yield"].attrs["units"] = (
-        case_ds["crop_cft_prod"].attrs["units"] + "/" + case_ds["crop_cft_area"].attrs["units"]
+    crop_prod_var = f"crop_prod_{m.lower()}"
+    crop_cft_prod_var = crop_prod_var.replace("crop", "crop_cft")
+    crop_cft_yield_var = crop_cft_prod_var.replace("prod", "yield")
+    case_ds[crop_cft_yield_var] = case_ds[crop_cft_prod_var] / case_ds["crop_cft_area"]
+    case_ds[crop_cft_yield_var].attrs["units"] = (
+        case_ds[crop_cft_prod_var].attrs["units"] + "/" + case_ds["crop_cft_area"].attrs["units"]
     )
 
     # Collapse CFTs to individual crops
     case_ds = combine_cft_to_crop(case_ds, "crop_cft_area", "crop_area", "sum", keep_attrs=True)
-    case_ds = combine_cft_to_crop(case_ds, "crop_cft_prod", "crop_prod", "sum", keep_attrs=True)
+    case_ds = combine_cft_to_crop(case_ds, crop_cft_prod_var, crop_prod_var, "sum", keep_attrs=True)
 
     # Calculate crop-level yield
-    case_ds["crop_yield"] = case_ds["crop_prod"] / case_ds["crop_area"]
-    case_ds["crop_yield"].attrs["units"] = (
-        case_ds["crop_prod"].attrs["units"] + "/" + case_ds["crop_area"].attrs["units"]
+    crop_yield_var = crop_prod_var.replace("prod", "yield")
+    case_ds[crop_yield_var] = case_ds[crop_prod_var] / case_ds["crop_area"]
+    case_ds[crop_yield_var].attrs["units"] = (
+        case_ds[crop_prod_var].attrs["units"] + "/" + case_ds["crop_area"].attrs["units"]
     )
 
     return case_ds
