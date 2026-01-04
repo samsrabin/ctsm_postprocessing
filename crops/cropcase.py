@@ -10,6 +10,8 @@ import sys
 import glob
 from time import time
 from typing import Union
+from tempfile import NamedTemporaryFile
+from shutil import move
 
 import xarray as xr
 import numpy as np
@@ -42,9 +44,13 @@ CFT_DS_CHUNKING = {"cft": 1, "crop": 1}
 
 
 def _save_cft_ds_to_netcdf(cft_ds: xr.Dataset, file_path: PathLike, verbose: bool):
+    """Save cft_ds to a temporary netCDF file, then move it to final destination"""
     if verbose:
         print(f"Saving {file_path}...")
-    cft_ds.to_netcdf(file_path)
+
+    with NamedTemporaryFile(delete=False) as tf:
+        cft_ds.to_netcdf(tf.name)
+        move(tf.name, file_path)
 
 
 def _mf_preproc(ds):
