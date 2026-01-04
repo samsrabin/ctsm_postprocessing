@@ -9,8 +9,13 @@ import os
 import sys
 import glob
 from time import time
+from typing import Union
+
 import xarray as xr
 import numpy as np
+
+# A type alias for convenience
+PathLike = Union[str, bytes, os.PathLike]
 
 try:
     # Attempt relative import if running as part of a package
@@ -34,6 +39,12 @@ except ImportError:
 
 CFT_DS_FILENAME = "cft_ds.nc"
 CFT_DS_CHUNKING = {"cft": 1, "crop": 1}
+
+
+def _save_cft_ds_to_netcdf(cft_ds: xr.Dataset, file_path: PathLike, verbose: bool):
+    if verbose:
+        print(f"Saving {file_path}...")
+    cft_ds.to_netcdf(file_path)
 
 
 def _mf_preproc(ds):
@@ -187,9 +198,7 @@ class CropCase:
                 this_h_tape,
             )
             if save_netcdf:
-                if self.verbose:
-                    print(f"Saving {self.cft_ds_file}...")
-                self.cft_ds.to_netcdf(self.cft_ds_file)
+                _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
             end = time()
             if self.verbose:
                 print(f"{msg} took {int(end - start)} s")

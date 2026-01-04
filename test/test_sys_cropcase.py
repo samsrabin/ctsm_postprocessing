@@ -1,5 +1,5 @@
 """
-Module to unit-test cropcase.py
+Module to system-test cropcase.py
 """
 
 # pylint: disable=redefined-outer-name
