@@ -8,6 +8,7 @@ livestock products" database.
 # pylint: disable=too-few-public-methods
 
 import pandas as pd
+import numpy as np
 
 pd.options.mode.copy_on_write = True
 
@@ -129,3 +130,54 @@ class FaostatProductionCropsLivestock:
         fao_this = fao_this.set_index(["Crop", "Year", "Area"])
 
         return fao_this
+
+
+    def get_clm_yield_prod_area_dict(self, fao_to_clm_dict: dict) -> dict:
+        """Get yield, production, and area in terms of CLM crops
+
+        Args:
+            fao_to_clm_dict (dict): Keys should be FAO crop names and the values should be what
+                you want the FAO crops renamed to. E.g.:
+                    {'Maize': 'corn', 'Rice': 'rice', 'Seed cotton, unginned': 'cotton'}
+
+        Raises:
+            RuntimeError: On failure to align production and area indices
+
+        Returns:
+            dict: A dictionary with keys yield, prod, and area. Values are Pandas DataFrames.
+        """
+
+        fao_prod = self.get_element("Production", fao_to_clm_dict=fao_to_clm_dict)
+        fao_area = self.get_element("Area harvested", fao_to_clm_dict=fao_to_clm_dict)
+
+        # Only include where both production and area data are present
+        def drop_a_where_not_in_b(a, b):
+            return a.drop(list(a.index.difference(b.index)))
+
+        fao_prod = drop_a_where_not_in_b(fao_prod, fao_area)
+        fao_area = drop_a_where_not_in_b(fao_area, fao_prod)
+        if not fao_prod.index.equals(fao_area.index):
+            raise RuntimeError("Mismatch of prod and area indices after trying to align them")
+
+        # Don't allow production where no area
+        is_bad = (fao_prod["Value"] > 0) & (fao_area["Value"] == 0)
+        fao_prod = fao_prod[~is_bad]
+        fao_area = fao_area[~is_bad]
+        if not fao_prod.index.equals(fao_area.index):
+            raise RuntimeError(
+                "Mismatch of prod and area indices after disallowing production where no area"
+            )
+
+        # Get yield
+        fao_yield = fao_prod.copy()
+        fao_yield["Element"] = "Yield"
+        fao_yield["Unit"] = "/".join([fao_prod["Unit"].iloc[0], fao_area["Unit"].iloc[0]])
+        fao_yield["Value"] = fao_prod["Value"] / fao_area["Value"]
+
+        # Get dict
+        fao_dict = {}
+        fao_dict["yield"] = fao_yield
+        fao_dict["prod"] = fao_prod
+        fao_dict["area"] = fao_area
+
+        return fao_dict
