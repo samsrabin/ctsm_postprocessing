@@ -8,7 +8,6 @@ accessing and managing CFTs.
 
 import os
 import sys
-import numpy as np
 
 try:
     # Attempt relative import if running as part of a package
@@ -61,7 +60,7 @@ class CftList:
             cft = cft.update_pft(n_non_crop_pfts)
 
         # Only include CFTs we care about
-        if len(cfts_to_include) != len(np.unique(cfts_to_include)):
+        if len(cfts_to_include) != len(set(cfts_to_include)):
             raise ValueError("Duplicate CFT(s) in cfts_to_include")
         self.cft_list = [x for x in self.cft_list if x.name in cfts_to_include]
 
