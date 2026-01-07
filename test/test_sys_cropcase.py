@@ -15,7 +15,7 @@ import pytest
 try:
     # Attempt relative import if running as part of a package
     from ..cropcase import CropCase, CFT_DS_FILENAME
-    from ..crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from ..crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
     from ..extra_area_prod_yield_etc import MATURITY_LEVELS
 except ImportError:
@@ -26,7 +26,7 @@ except ImportError:
     sys.path.insert(0, parent_dir)
     sys.path.insert(0, grandparent_dir)
     from crops.cropcase import CropCase, CFT_DS_FILENAME
-    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from crops.extra_area_prod_yield_etc import MATURITY_LEVELS
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
@@ -43,7 +43,6 @@ def cropcase_base(tmp_path_factory):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
         crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
@@ -176,7 +175,6 @@ def test_setup_cropcase_noperms(tmp_path):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
         crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
@@ -220,7 +218,6 @@ def test_setup_cropcase_nofile(tmp_path):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
         crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
         force_no_cft_ds_file=True,
@@ -246,7 +243,6 @@ def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
             file_dir=FILE_DIR,
             start_year=START_YEAR,
             end_year=END_YEAR,
-            cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
             crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
             cft_ds_dir=temp_dir,
             force_new_cft_ds_file=True,

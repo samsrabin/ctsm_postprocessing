@@ -155,7 +155,6 @@ class CropCaseList(list):
                 CropCase(
                     case_name,
                     case_output_dir,
-                    opts["cfts_to_include"],
                     opts["crops_to_include"],
                     opts["start_year"],
                     opts["end_year"],

@@ -15,7 +15,7 @@ try:
     # Attempt relative import if running as part of a package
     from ..cropcase import CropCase
     from ..utils import grid_one_variable, import_ds
-    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 except ImportError:
     # Fallback to absolute import if running as a script
@@ -25,7 +25,7 @@ except ImportError:
     sys.path.insert(0, parent_dir)
     sys.path.insert(0, grandparent_dir)
     from crops.cropcase import CropCase
-    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from utils import grid_one_variable, import_ds
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
@@ -51,7 +51,6 @@ class TestSysGridOneVariable(unittest.TestCase):
             file_dir=FILE_DIR,
             start_year=START_YEAR,
             end_year=END_YEAR,
-            cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
             crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
             cft_ds_dir=self._tempdir,
             this_h_tape="h0i",

@@ -13,7 +13,7 @@ import pytest
 try:
     # Attempt relative import if running as part of a package
     from ..crop_case_list import CropCaseList
-    from ..crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from ..crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from .defaults import START_YEAR, END_YEAR, CESM_OUTPUT_DIR
     from .test_sys_cropcase import check_crujra_matreqs_case_shared
 except ImportError:
@@ -23,7 +23,7 @@ except ImportError:
     sys.path.insert(0, parent_dir)
     sys.path.insert(0, grandparent_dir)
     from crops.crop_case_list import CropCaseList
-    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
     from test.defaults import START_YEAR, END_YEAR, CESM_OUTPUT_DIR
     from test.test_sys_cropcase import check_crujra_matreqs_case_shared
 
@@ -31,7 +31,6 @@ CASE_NAME_LIST = ["crujra_matreqs", "crujra_matreqs_copy"]
 DEFAULT_OPTS = {}
 DEFAULT_OPTS["case_name_list"] = CASE_NAME_LIST
 DEFAULT_OPTS["CESM_output_dir"] = CESM_OUTPUT_DIR
-DEFAULT_OPTS["cfts_to_include"] = DEFAULT_CFTS_TO_INCLUDE
 DEFAULT_OPTS["crops_to_include"] = DEFAULT_CROPS_TO_INCLUDE
 DEFAULT_OPTS["start_year"] = START_YEAR
 DEFAULT_OPTS["end_year"] = END_YEAR

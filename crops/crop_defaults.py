@@ -43,3 +43,9 @@ DEFAULT_CROPS_TO_INCLUDE = [
     "sugarcane",
     "wheat",
 ]
+
+# Checks
+if len(DEFAULT_CFTS_TO_INCLUDE) != len(set(DEFAULT_CFTS_TO_INCLUDE)):
+    raise ValueError("Duplicate CFT(s) in DEFAULT_CFTS_TO_INCLUDE")
+if len(DEFAULT_CROPS_TO_INCLUDE) != len(set(DEFAULT_CROPS_TO_INCLUDE)):
+    raise ValueError("Duplicate crop(s) in DEFAULT_CROPS_TO_INCLUDE")

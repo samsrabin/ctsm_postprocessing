@@ -25,7 +25,7 @@ try:
     from .croplist import CropList
     from . import crop_secondary_variables as c2o
     from . import crop_utils as cu
-    from .crop_defaults import N_PFTS
+    from .crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE
     from .extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from .crop_biomass import get_crop_biomass_vars
 except ImportError:
@@ -35,7 +35,7 @@ except ImportError:
     from crops.croplist import CropList
     import crops.crop_secondary_variables as c2o
     import crops.crop_utils as cu
-    from crops.crop_defaults import N_PFTS
+    from crops.crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE
     from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from crops.crop_biomass import get_crop_biomass_vars
 
@@ -136,7 +136,6 @@ class CropCase:
         self,
         name,
         file_dir,
-        cfts_to_include,
         crops_to_include,
         start_year,
         end_year,
@@ -146,6 +145,8 @@ class CropCase:
         force_no_cft_ds_file=False,
         cft_ds_dir=None,
         this_h_tape=None,
+        # TODO: Future-proof default: Determine from ds upon initialization.
+        cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
     ):
         # pylint: disable=too-many-positional-arguments
         """
@@ -154,7 +155,6 @@ class CropCase:
         Parameters:
             name (str): Name of the crop case.
             file_dir (str): Directory containing the crop data files.
-            cfts_to_include (list): List of CFTs to include in the crop case.
             crops_to_include (list): List of crops to include in the crop case.
             start_year (int): Start year for the crop data.
             end_year (int): End year for the crop data.
@@ -342,7 +342,7 @@ class CropCase:
         Get lists of CFTs and crops included in history
         """
         # Get CFT list
-        self.cft_list = CftList(ds, n_pfts, cfts_to_include)
+        self.cft_list = CftList(ds, n_pfts, cfts_to_include=cfts_to_include)
 
         # Get crop list
         self.crop_list = CropList(crops_to_include, self.cft_list, ds)
