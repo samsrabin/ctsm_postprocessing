@@ -228,6 +228,23 @@ def test_setup_cropcase_nofile(tmp_path):
     assert not os.path.exists(os.path.join(temp_dir, CFT_DS_FILENAME))
 
 
+def test_setup_cropcase_error_if_no_crop_for_cft(tmp_path):
+    """Make sure error is thrown if a CFT has no crop"""
+    crops_to_include = [DEFAULT_CROPS_TO_INCLUDE[0]]
+    assert crops_to_include != DEFAULT_CROPS_TO_INCLUDE
+
+    msg = f"Which crop should {DEFAULT_CROPS_TO_INCLUDE[1]} be associated with?"
+    with pytest.raises(KeyError, match=msg):
+        CropCase(
+            name=CASE_NAME,
+            file_dir=FILE_DIR,
+            start_year=START_YEAR,
+            end_year=END_YEAR,
+            crops_to_include=crops_to_include,
+            cft_ds_dir=str(tmp_path),
+        )
+
+
 def test_setup_cropcase_error_if_newfile_and_nofile(tmp_path):
     """
     Make sure that CropCase raises error if both force_new_cft_ds_file and force_no_cft_ds_file

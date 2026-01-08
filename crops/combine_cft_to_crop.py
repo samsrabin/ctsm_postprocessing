@@ -29,10 +29,14 @@ def get_cft_crop_da(crops_to_include, case, case_ds):
         DataArray with CFT dimension where each element contains the corresponding
         crop name as a string
     """
+    cft_array = case_ds["cft"].values
     cft_crop_array = np.full(case_ds.sizes["cft"], "", dtype=object)
     for i, crop in enumerate(crops_to_include):
         for pft_num in case.crop_list[crop].pft_nums:
-            cft_crop_array[np.where(case_ds["cft"].values == pft_num)] = crop
+            cft_crop_array[np.where(cft_array == pft_num)] = crop
+    for cft, crop in zip(cft_array, cft_crop_array):
+        if crop == "":
+            raise RuntimeError(f"CFT {cft} has no associated crop")
     cft_crop_da = xr.DataArray(
         data=cft_crop_array,
         dims=["cft"],

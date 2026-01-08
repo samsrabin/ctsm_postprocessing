@@ -174,6 +174,9 @@ class CropCase:
         # Check incompatible options
         if force_new_cft_ds_file and force_no_cft_ds_file:
             raise ValueError("force_new_cft_ds_file and force_no_cft_ds_file can't both be True")
+        for cft in cfts_to_include:
+            if not any(crop in cft for crop in crops_to_include):
+                raise KeyError(f"Which crop should {cft} be associated with?")
 
         # Create CFT dataset file if needed
         if cft_ds_dir is None:
