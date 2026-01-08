@@ -155,12 +155,12 @@ class CropCaseList(list):
                 CropCase(
                     case_name,
                     case_output_dir,
-                    opts["crops_to_include"],
                     opts["start_year"],
                     opts["end_year"],
                     verbose=opts["verbose"],
                     force_new_cft_ds_file=opts["force_new_cft_ds_file"],
                     force_no_cft_ds_file=opts["force_no_cft_ds_file"],
+                    crops_to_include=opts["crops_to_include"],
                 ),
             )
 

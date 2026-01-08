@@ -25,7 +25,7 @@ try:
     from .croplist import CropList
     from . import crop_secondary_variables as c2o
     from . import crop_utils as cu
-    from .crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE
+    from .crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
     from .extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from .crop_biomass import get_crop_biomass_vars
 except ImportError:
@@ -35,7 +35,7 @@ except ImportError:
     from crops.croplist import CropList
     import crops.crop_secondary_variables as c2o
     import crops.crop_utils as cu
-    from crops.crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE
+    from crops.crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
     from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from crops.crop_biomass import get_crop_biomass_vars
 
@@ -136,7 +136,6 @@ class CropCase:
         self,
         name,
         file_dir,
-        crops_to_include,
         start_year,
         end_year,
         verbose=False,
@@ -147,6 +146,7 @@ class CropCase:
         this_h_tape=None,
         # TODO: Future-proof default: Determine from ds upon initialization.
         cfts_to_include=DEFAULT_CFTS_TO_INCLUDE,
+        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
     ):
         # pylint: disable=too-many-positional-arguments
         """

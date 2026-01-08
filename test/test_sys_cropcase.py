@@ -43,7 +43,6 @@ def cropcase_base(tmp_path_factory):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
 
@@ -175,7 +174,6 @@ def test_setup_cropcase_noperms(tmp_path):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
     )
     assert [x.name for x in this_case.crop_list] == DEFAULT_CROPS_TO_INCLUDE
@@ -218,7 +216,6 @@ def test_setup_cropcase_nofile(tmp_path):
         file_dir=FILE_DIR,
         start_year=START_YEAR,
         end_year=END_YEAR,
-        crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
         cft_ds_dir=temp_dir,
         force_no_cft_ds_file=True,
     )

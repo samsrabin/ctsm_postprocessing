@@ -51,7 +51,6 @@ class TestSysGridOneVariable(unittest.TestCase):
             file_dir=FILE_DIR,
             start_year=START_YEAR,
             end_year=END_YEAR,
-            crops_to_include=DEFAULT_CROPS_TO_INCLUDE,
             cft_ds_dir=self._tempdir,
             this_h_tape="h0i",
             force_no_cft_ds_file=True,
