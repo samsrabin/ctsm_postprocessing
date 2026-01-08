@@ -160,7 +160,6 @@ class CropCaseList(list):
                     verbose=opts["verbose"],
                     force_new_cft_ds_file=opts["force_new_cft_ds_file"],
                     force_no_cft_ds_file=opts["force_no_cft_ds_file"],
-                    crops_to_include=opts["crops_to_include"],
                 ),
             )
 
