@@ -201,10 +201,10 @@ def _harvest_area_stats(case_ds):
         dim="mxharvests",
     )
     case_ds["cft_harv_area_immature"].attrs["units"] = cft_planted_area.attrs["units"]
-    case_ds["cft_harv_area_failed"] = (
+    case_ds["cft_harv_area_unmarketable"] = (
         cft_planted_area * (1 - case_ds["MARKETABLE_HARVEST"]).where(hr > 0)
     ).sum(dim="mxharvests")
-    case_ds["cft_harv_area_failed"].attrs["units"] = cft_planted_area.attrs["units"]
+    case_ds["cft_harv_area_unmarketable"].attrs["units"] = cft_planted_area.attrs["units"]
     case_ds["crop_harv_area"] = (
         case_ds["cft_harv_area"]
         .groupby(case_ds["cft_crop"])
@@ -219,12 +219,12 @@ def _harvest_area_stats(case_ds):
         .rename({"cft_crop": "crop"})
     )
     case_ds["crop_harv_area_immature"].attrs["units"] = cft_planted_area.attrs["units"]
-    case_ds["crop_harv_area_failed"] = (
-        case_ds["cft_harv_area_failed"]
+    case_ds["crop_harv_area_unmarketable"] = (
+        case_ds["cft_harv_area_unmarketable"]
         .groupby(case_ds["cft_crop"])
         .sum(dim="cft")
         .rename({"cft_crop": "crop"})
     )
-    case_ds["crop_harv_area_failed"].attrs["units"] = cft_planted_area.attrs["units"]
+    case_ds["crop_harv_area_unmarketable"].attrs["units"] = cft_planted_area.attrs["units"]
 
     return case_ds

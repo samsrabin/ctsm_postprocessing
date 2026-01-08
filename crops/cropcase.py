@@ -243,6 +243,8 @@ class CropCase:
                 rename_dict[v] = "MARKETABLE_HARVEST"
             elif "VIABLE" in v:
                 rename_dict[v] = v.replace("VIABLE", "MARKETABLE")
+            elif v.endswith("_harv_area_failed"):
+                rename_dict[v] = v.replace("failed", "unmarketable")
         if rename_dict:
             self.cft_ds = self.cft_ds.rename(rename_dict)
 
