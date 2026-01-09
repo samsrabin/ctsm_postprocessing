@@ -54,6 +54,16 @@ def _save_cft_ds_to_netcdf(cft_ds: xr.Dataset, file_path: PathLike, verbose: boo
 
 
 def _mf_preproc(ds):
+    """Every netCDF file is run through this function after being read"""
+
+    # Check that time axis is what we expect: The variables we care about need to be saved
+    # on instantaneous files at the end of every year in order to be meaningful.
+    if ds["time"].attrs["long_name"] != "time at end of time step":
+        raise ValueError("Variables for cft_ds should be on instantaneous files but aren't")
+    t = ds["time"].values[0]
+    if not (t.month == t.day == 1) and (t.hour == t.minute == t.second == t.microsecond == 0):
+        raise ValueError(f"Expected file timestamp Jan. 1 00:00:00; got {t}")
+
     # If we care about pfts1d_wtgcell (the fraction of the grid cell taken up by each PFT during the
     # model run; i.e., after applying mergetoclmpft), this is necessary for outputs before
     # ctsm5.3.064. Otherwise, xarray will not recognize that it can vary over time, and we'll just
