@@ -146,6 +146,7 @@ class CropCase:
         self,
         name,
         file_dir,
+        *,
         start_year,
         end_year,
         verbose=False,
