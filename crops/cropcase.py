@@ -166,8 +166,13 @@ class CropCase:
             name (str): Name of the crop case.
             file_dir (str): Directory containing the crop data files.
             crops_to_include (list): List of crops to include in the crop case.
-            start_year (int): Start year for the crop data.
-            end_year (int): End year for the crop data.
+            start_year (int): The first calendar year whose data should be included. Note that,
+                              because the variables we're processing are only meaningful if saved
+                              to instantaneous files at the end of a year, calendar year Y gets its
+                              data associated with a timestep whose year is Y+1. This class assumes
+                              you want to read files starting with timestep start_year-1.
+            end_year (int): The last calendar year whose data should be included. See note for
+                            start_year above.
             verbose (bool): Whether to print verbose output. Default False.
             n_pfts (int): Number of PFTs. Default N_PFTS.
             force_new_cft_ds_file (bool): Even if cft_ds file exists, read and save a new one. Default False.
@@ -233,12 +238,28 @@ class CropCase:
                 chunks=CFT_DS_CHUNKING,
                 chunked_array_type="dask",
             )
-            start_date = f"{start_year}-01-01"
-            end_date = f"{end_year}-12-31"
+
+            # A variable saved at the end of the last timestep of a year (and therefore containing
+            # data for that year) gets a timestamp with the NEXT year, but we want the user to give
+            # the calendar years they actually care about. Thus, here we add 1 to the start and end
+            # years the user requested. (See _mf_preproc() for check that time axis is right for
+            # this.)
+            start_date = f"{start_year + 1}-01-01"
+            end_date = f"{end_year + 1}-12-31"
             time_slice = slice(start_date, end_date)
             self.cft_ds = self.cft_ds.sel(time=time_slice)
+
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
+
+        # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
+        # Y+1. Here, we replace it to be simpler, where the timestep is just an integer year
+        # corresponding to the year the data came from.
+        self.cft_ds["time"] = xr.DataArray(
+            data=np.array([t.year - 1 for t in self.cft_ds["time"].values]),
+            dims=["time"],
+            attrs={"long_name": "year"}
+        )
 
         # cft_crop is often a groupby() variable, so computing it makes things more efficient.
         # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
@@ -345,8 +366,14 @@ class CropCase:
         # Get list of files to actually include
         for filename in file_list:
             ds = xr.open_dataset(filename)
-            start_year_ok = start_year is None or start_year <= ds.time.values[-1].year
-            end_year_ok = end_year is None or ds.time.values[0].year <= end_year
+
+            # A variable saved at the end of the last timestep of a year (and therefore containing
+            # data for that year) gets a timestamp with the NEXT year, but we want the user to give
+            # the calendar years they actually care about. Thus, here we add 1 to the start and end
+            # years the user requested. (See _mf_preproc() for check that time axis is right for
+            # this.)
+            start_year_ok = start_year is None or (start_year + 1) <= ds.time.values[-1].year
+            end_year_ok = end_year is None or ds.time.values[0].year <= (end_year + 1)
             if start_year_ok and end_year_ok:
                 self.file_list.append(filename)
         if not self.file_list:

@@ -121,20 +121,29 @@ def check_crujra_matreqs_case_shared(this_case):
     assert this_case.cft_ds["crop_cft_area"].dims == ("pft", "cft", "time")
     assert this_case.cft_ds["crop_area"].dims == ("pft", "crop", "time")
 
+    # Check that time axis is what we expect
+    expected_time_da = xr.DataArray(
+        data=np.array(np.arange(START_YEAR, END_YEAR + 1)),
+        dims=["time"],
+        attrs={"long_name": "year"}
+    )
+    expected_time_da = expected_time_da.assign_coords({"time": expected_time_da})
+    assert this_case.cft_ds["time"].equals(expected_time_da)
+
     # Ensure that values of some derived variables are correct
-    assert this_case.cft_ds["crop_cft_area"].mean().values == pytest.approx(379009483.9427163)
+    assert this_case.cft_ds["crop_cft_area"].mean().values == pytest.approx(375510026.3004716)
     assert this_case.cft_ds["crop_cft_prod_marketable"].mean().values == pytest.approx(
-        198672315418.34564
+        197061665729.85678
     )
     assert this_case.cft_ds["crop_cft_yield_marketable"].mean().values == pytest.approx(
-        602.2368436177571
+        605.3616856892903
     )
-    assert this_case.cft_ds["crop_area"].mean().values == pytest.approx(1010691957.180577)
+    assert this_case.cft_ds["crop_area"].mean().values == pytest.approx(1001360070.1345912)
     assert this_case.cft_ds["crop_prod_marketable"].mean().values == pytest.approx(
-        529792841115.5884
+        525497775279.61804
     )
     assert this_case.cft_ds["crop_yield_marketable"].mean().values == pytest.approx(
-        568.3093914610291
+        569.6446054172038
     )
 
 
