@@ -30,6 +30,11 @@ except ImportError:
     from crops.extra_area_prod_yield_etc import MATURITY_LEVELS
     from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
 
+# The first and last years we have test files for. Note that these refer to the years whose data is
+# included; add +1 to get years in filenames and netCDF timestamps.
+FIRST_AVAILABLE_YEAR = 1986
+LAST_AVAILABLE_YEAR = 1990
+
 
 @pytest.fixture(scope="session")
 def cropcase_base(tmp_path_factory):
@@ -125,7 +130,7 @@ def check_crujra_matreqs_case_shared(this_case):
     expected_time_da = xr.DataArray(
         data=np.array(np.arange(START_YEAR, END_YEAR + 1)),
         dims=["time"],
-        attrs={"long_name": "year"}
+        attrs={"long_name": "year"},
     )
     expected_time_da = expected_time_da.assign_coords({"time": expected_time_da})
     assert this_case.cft_ds["time"].equals(expected_time_da)
@@ -235,6 +240,74 @@ def test_setup_cropcase_nofile(tmp_path):
 
     # Ensure file wasn't saved
     assert not os.path.exists(os.path.join(temp_dir, CFT_DS_FILENAME))
+
+
+def test_setup_cropcase_allyears(tmp_path):
+    """
+    Make sure that CropCase includes all years if start_year and end_year not specified
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        cft_ds_dir=temp_dir,
+        force_no_cft_ds_file=True,
+    )
+
+    # Check that time axis is what we expect
+    expected_time_da = xr.DataArray(
+        data=np.array(np.arange(FIRST_AVAILABLE_YEAR, LAST_AVAILABLE_YEAR + 1)),
+        dims=["time"],
+        attrs={"long_name": "year"},
+    )
+    expected_time_da = expected_time_da.assign_coords({"time": expected_time_da})
+    assert this_case.cft_ds["time"].equals(expected_time_da)
+
+
+def test_setup_cropcase_just_startyear(tmp_path):
+    """
+    Make sure that CropCase is right if only start_year is specified
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        cft_ds_dir=temp_dir,
+        force_no_cft_ds_file=True,
+    )
+
+    # Check that time axis is what we expect
+    expected_time_da = xr.DataArray(
+        data=np.array(np.arange(START_YEAR, LAST_AVAILABLE_YEAR + 1)),
+        dims=["time"],
+        attrs={"long_name": "year"},
+    )
+    expected_time_da = expected_time_da.assign_coords({"time": expected_time_da})
+    assert this_case.cft_ds["time"].equals(expected_time_da)
+
+
+def test_setup_cropcase_just_endyear(tmp_path):
+    """
+    Make sure that CropCase is right if only end_year is specified
+    """
+    temp_dir = str(tmp_path)
+    this_case = CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        end_year=END_YEAR,
+        cft_ds_dir=temp_dir,
+        force_no_cft_ds_file=True,
+    )
+
+    # Check that time axis is what we expect
+    expected_time_da = xr.DataArray(
+        data=np.array(np.arange(FIRST_AVAILABLE_YEAR, END_YEAR + 1)),
+        dims=["time"],
+        attrs={"long_name": "year"},
+    )
+    expected_time_da = expected_time_da.assign_coords({"time": expected_time_da})
+    assert this_case.cft_ds["time"].equals(expected_time_da)
 
 
 def test_setup_cropcase_error_if_no_crop_for_cft(tmp_path):

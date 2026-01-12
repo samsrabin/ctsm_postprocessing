@@ -147,8 +147,8 @@ class CropCase:
         name,
         file_dir,
         *,
-        start_year,
-        end_year,
+        start_year=None,
+        end_year=None,
         verbose=False,
         n_pfts=N_PFTS,
         force_new_cft_ds_file=False,
@@ -240,15 +240,17 @@ class CropCase:
                 chunked_array_type="dask",
             )
 
+            # Slice based on years, if start_year or end_year requested.
             # A variable saved at the end of the last timestep of a year (and therefore containing
             # data for that year) gets a timestamp with the NEXT year, but we want the user to give
             # the calendar years they actually care about. Thus, here we add 1 to the start and end
             # years the user requested. (See _mf_preproc() for check that time axis is right for
             # this.)
-            start_date = f"{start_year + 1}-01-01"
-            end_date = f"{end_year + 1}-12-31"
-            time_slice = slice(start_date, end_date)
-            self.cft_ds = self.cft_ds.sel(time=time_slice)
+            if any(date is not None for date in [start_year, end_year]):
+                start_date = None if start_year is None else f"{start_year + 1}-01-01"
+                end_date = None if end_year is None else f"{end_year + 1}-12-31"
+                time_slice = slice(start_date, end_date)
+                self.cft_ds = self.cft_ds.sel(time=time_slice)
 
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
