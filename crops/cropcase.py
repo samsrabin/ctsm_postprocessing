@@ -39,7 +39,7 @@ except ImportError:
     from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from crops.crop_biomass import get_crop_biomass_vars
 
-CFT_DS_FILENAME = "cft_ds.nc"
+CFT_DS_FILENAME = "cft_ds.TEST.nc"
 CFT_DS_CHUNKING = {"cft": 1, "crop": 1}
 
 
