@@ -40,7 +40,7 @@ except ImportError:
     from crops.crop_biomass import get_crop_biomass_vars
 
 CFT_DS_FILENAME = "cft_ds.TEST.nc"
-CFT_DS_CHUNKING = {"cft": 1, "crop": 1}
+CFT_DS_CHUNKING = {"cft": 1}
 
 
 def _save_cft_ds_to_netcdf(cft_ds: xr.Dataset, file_path: PathLike, verbose: bool):
@@ -255,6 +255,9 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
+        # Get derived variables
+        self.cft_ds = self._get_derived_variables(crops_to_include, self.cft_ds)
+
         # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
         # Y+1. Here, we replace it to be simpler, where the timestep is just an integer year
         # corresponding to the year the data came from.
@@ -426,9 +429,6 @@ class CropCase:
             coords={"pft": cft_ds["pft"].values},
             dims=["pft"],
         )
-
-        # Get secondary variables
-        cft_ds = self._get_derived_variables(crops_to_include, cft_ds)
 
         return cft_ds
 
