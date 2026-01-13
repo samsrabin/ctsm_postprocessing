@@ -418,7 +418,21 @@ class CropCase:
                     coords="minimal",
                 )
 
+        # Get gridcell land area
+        cft_ds.load()
+        area_p = _get_area_p(cft_ds)
+        cft_ds["pfts1d_landarea"] = xr.DataArray(
+            data=area_p,
+            coords={"pft": cft_ds["pft"].values},
+            dims=["pft"],
+        )
+
         # Get secondary variables
+        cft_ds = self._get_derived_variables(crops_to_include, cft_ds)
+
+        return cft_ds
+
+    def _get_derived_variables(self, crops_to_include, cft_ds):
         if self.verbose:
             start = time()
             print("Getting secondary variables")
@@ -437,19 +451,9 @@ class CropCase:
             end = time()
             print(f"Secondary variables took {int(end - start)} s")
 
-        # Get gridcell land area
-        cft_ds.load()
-        area_p = _get_area_p(cft_ds)
-        cft_ds["pfts1d_landarea"] = xr.DataArray(
-            data=area_p,
-            coords={"pft": cft_ds["pft"].values},
-            dims=["pft"],
-        )
-
         # Get more stuff
         cft_ds = extra_area_prod_yield_etc(crops_to_include, self, cft_ds)
         cft_ds = get_crop_biomass_vars(cft_ds, self.name)
-
         return cft_ds
 
     @classmethod
