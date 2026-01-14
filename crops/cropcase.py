@@ -516,13 +516,15 @@ class CropCase:
             print("Could not calculate GSLEN_PERHARV")
         else:
             cft_ds["GSLEN_PERHARV"] = gslen_perharv
-        if self.verbose:
-            end = time()
-            print(f"Secondary variables took {int(end - start)} s")
 
         # Get more stuff
         cft_ds = extra_area_prod_yield_etc(self.crops_to_include, self, cft_ds)
         cft_ds = get_crop_biomass_vars(cft_ds, self.name)
+
+        if self.verbose:
+            end = time()
+            print(f"Derived variables took {int(end - start)} s")
+
         return cft_ds
 
     @classmethod
