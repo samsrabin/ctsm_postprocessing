@@ -39,18 +39,23 @@ except ImportError:
     from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
     from crops.crop_biomass import get_crop_biomass_vars
 
-CFT_DS_FILENAME = "cft_ds.TEST.nc"
+CFT_DS_FILENAME = "cft_ds.nc"
 CFT_DS_CHUNKING = {"cft": 1}
 
 
 def _save_cft_ds_to_netcdf(cft_ds: xr.Dataset, file_path: PathLike, verbose: bool):
     """Save cft_ds to a temporary netCDF file, then move it to final destination"""
     if verbose:
+        start = time()
         print(f"Saving {file_path}...")
 
     with NamedTemporaryFile(delete=False) as tf:
         cft_ds.to_netcdf(tf.name)
         move(tf.name, file_path)
+
+    if verbose:
+        end = time()
+        print(f"Saving took {int(end - start)} s")
 
 
 def _mf_preproc(ds):
@@ -207,31 +212,26 @@ class CropCase:
         self._get_cft_ds_filepath()
 
         # Create CFT dataset file if needed
-        self._create_cft_ds_file(
+        self._create_cft_ds(
             start_year=start_year,
             end_year=end_year,
         )
 
-        # Open CFT dataset and slice based on years
-        self._open_cft_ds_file(start_year, end_year)
-
         # Misc. things to do after opening CFT dataset
         self._finish_cft_ds()
+
+        # Save, if doing so
+        if self.save_netcdf:
+            _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
+
+        # Open CFT dataset and slice based on years
+        self._open_cft_ds_file(start_year, end_year)
 
     def _finish_cft_ds(self):
         # Get derived variables
         if self.cft_list is None:
             self._get_cft_and_crop_lists(self.n_pfts, self.cft_ds)
         self.cft_ds = self._get_derived_variables(self.cft_ds)
-
-        # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
-        # Y+1. Here, we replace it to be simpler, where the timestep is just an integer year
-        # corresponding to the year the data came from.
-        self.cft_ds["time"] = xr.DataArray(
-            data=np.array([t.year - 1 for t in self.cft_ds["time"].values]),
-            dims=["time"],
-            attrs={"long_name": "year"},
-        )
 
         # cft_crop is often a groupby() variable, so computing it makes things more efficient.
         # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
@@ -278,7 +278,16 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
-    def _create_cft_ds_file(self, *, start_year, end_year):
+        # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
+        # Y+1. Here, we replace it to be simpler, where the timestep is just an integer year
+        # corresponding to the year the data came from.
+        self.cft_ds["time"] = xr.DataArray(
+            data=np.array([t.year - 1 for t in self.cft_ds["time"].values]),
+            dims=["time"],
+            attrs={"long_name": "year"},
+        )
+
+    def _create_cft_ds(self, *, start_year, end_year):
         if not self.read_history_files:
             return
 
@@ -290,23 +299,18 @@ class CropCase:
             start_file_year = start_year
             end_file_year = end_year
 
-        # Read files, create cft_ds, and save if doing so
+        # Read files and create cft_ds
         start = time()
         self.cft_ds = self._read_and_process_files(
             self.n_pfts,
             start_file_year,
             end_file_year,
         )
-        if self.save_netcdf:
-            _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
         end = time()
 
         # Print message
         if self.verbose:
-            msg = f"Making {CFT_DS_FILENAME}"
-            if self.save_netcdf:
-                msg = msg.replace("Making", "Making and saving")
-            print(f"{msg} took {int(end - start)} s")
+            print(f"Making cft_ds took {int(end - start)} s")
 
     def _get_cft_ds_file_scratch(self):
         scratch_dir = os.environ["SCRATCH"]
