@@ -202,14 +202,12 @@ class CropCase:
                 raise KeyError(f"Which crop should {cft} be associated with?")
 
         # Get path to save cft_ds.nc
-        read_history_files, save_netcdf = self._get_cft_ds_filepath()
+        self._get_cft_ds_filepath()
 
         # Create CFT dataset file if needed
         self._create_cft_ds_file(
             start_year=start_year,
             end_year=end_year,
-            read_history_files=read_history_files,
-            save_netcdf=save_netcdf,
         )
 
         # Open CFT dataset and slice based on years
@@ -278,11 +276,11 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
-    def _create_cft_ds_file(self, *, start_year, end_year, read_history_files, save_netcdf):
-        if not read_history_files:
+    def _create_cft_ds_file(self, *, start_year, end_year):
+        if not self.read_history_files:
             return
 
-        if save_netcdf:
+        if self.save_netcdf:
             # If we're generating cft_ds.nc, we'll read all years
             start_file_year = None
             end_file_year = None
@@ -297,14 +295,14 @@ class CropCase:
             start_file_year,
             end_file_year,
         )
-        if save_netcdf:
+        if self.save_netcdf:
             _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
         end = time()
 
         # Print message
         if self.verbose:
             msg = f"Making {CFT_DS_FILENAME}"
-            if save_netcdf:
+            if self.save_netcdf:
                 msg = msg.replace("Making", "Making and saving")
             print(f"{msg} took {int(end - start)} s")
 
@@ -315,7 +313,7 @@ class CropCase:
         self.cft_ds_file = os.path.join(self.cft_ds_dir, CFT_DS_FILENAME)
 
         # Determine whether to read history files
-        read_history_files = (
+        self.read_history_files = (
             self.force_new_cft_ds_file
             or self.force_no_cft_ds_file
             or not os.path.exists(self.cft_ds_file)
@@ -323,11 +321,9 @@ class CropCase:
 
         # Determine whether to save netCDF
         user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-        save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
-        if not any([save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
+        self.save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
+        if not any([self.save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
             print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
-
-        return read_history_files, save_netcdf
 
     def __eq__(self, other):
         # Check that they're both CropCases
