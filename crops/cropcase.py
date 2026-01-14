@@ -211,32 +211,12 @@ class CropCase:
         )
 
         # Open CFT dataset and slice based on years
-        if os.path.exists(self.cft_ds_file) and not self.force_no_cft_ds_file:
-            # Always prefer to read from the file, to ensure consistency of performance
-            self.cft_ds = None
-            start = time()
-            self.cft_ds = xr.open_dataset(
-                self.cft_ds_file,
-                decode_timedelta=False,
-                chunks=CFT_DS_CHUNKING,
-                chunked_array_type="dask",
-            )
+        self._open_cft_ds_file(start_year, end_year)
 
-            # Slice based on years, if start_year or end_year requested.
-            # A variable saved at the end of the last timestep of a year (and therefore containing
-            # data for that year) gets a timestamp with the NEXT year, but we want the user to give
-            # the calendar years they actually care about. Thus, here we add 1 to the start and end
-            # years the user requested. (See _mf_preproc() for check that time axis is right for
-            # this.)
-            if any(date is not None for date in [start_year, end_year]):
-                start_date = None if start_year is None else f"{start_year + 1}-01-01"
-                end_date = None if end_year is None else f"{end_year + 1}-12-31"
-                time_slice = slice(start_date, end_date)
-                self.cft_ds = self.cft_ds.sel(time=time_slice)
+        # Misc. things to do after opening CFT dataset
+        self._finish_cft_ds(n_pfts, cfts_to_include, crops_to_include)
 
-            end = time()
-            print(f"Opening cft_ds took {int(end - start)} s")
-
+    def _finish_cft_ds(self, n_pfts, cfts_to_include, crops_to_include):
         # Get derived variables
         if self.cft_list is None:
             self._get_cft_and_crop_lists(cfts_to_include, crops_to_include, n_pfts, self.cft_ds)
@@ -268,6 +248,33 @@ class CropCase:
                 rename_dict[v] = v.replace("failed", "unmarketable")
         if rename_dict:
             self.cft_ds = self.cft_ds.rename(rename_dict)
+
+    def _open_cft_ds_file(self, start_year, end_year):
+        if os.path.exists(self.cft_ds_file) and not self.force_no_cft_ds_file:
+            # Always prefer to read from the file, to ensure consistency of performance
+            self.cft_ds = None
+            start = time()
+            self.cft_ds = xr.open_dataset(
+                self.cft_ds_file,
+                decode_timedelta=False,
+                chunks=CFT_DS_CHUNKING,
+                chunked_array_type="dask",
+            )
+
+            # Slice based on years, if start_year or end_year requested.
+            # A variable saved at the end of the last timestep of a year (and therefore containing
+            # data for that year) gets a timestamp with the NEXT year, but we want the user to give
+            # the calendar years they actually care about. Thus, here we add 1 to the start and end
+            # years the user requested. (See _mf_preproc() for check that time axis is right for
+            # this.)
+            if any(date is not None for date in [start_year, end_year]):
+                start_date = None if start_year is None else f"{start_year + 1}-01-01"
+                end_date = None if end_year is None else f"{end_year + 1}-12-31"
+                time_slice = slice(start_date, end_date)
+                self.cft_ds = self.cft_ds.sel(time=time_slice)
+
+            end = time()
+            print(f"Opening cft_ds took {int(end - start)} s")
 
     def _create_cft_ds_file(
         self, *, start_year, end_year, n_pfts, this_h_tape, cfts_to_include, crops_to_include
