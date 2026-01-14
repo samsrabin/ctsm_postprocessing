@@ -279,28 +279,34 @@ class CropCase:
             print(f"Opening cft_ds took {int(end - start)} s")
 
     def _create_cft_ds_file(self, *, start_year, end_year, read_history_files, save_netcdf):
-        if read_history_files:
-            if save_netcdf:
-                # If we're generating cft_ds.nc, we'll read all years
-                start_file_year = None
-                end_file_year = None
-            else:
-                start_file_year = start_year
-                end_file_year = end_year
+        if not read_history_files:
+            return
+
+        if save_netcdf:
+            # If we're generating cft_ds.nc, we'll read all years
+            start_file_year = None
+            end_file_year = None
+        else:
+            start_file_year = start_year
+            end_file_year = end_year
+
+        # Read files, create cft_ds, and save if doing so
+        start = time()
+        self.cft_ds = self._read_and_process_files(
+            self.n_pfts,
+            start_file_year,
+            end_file_year,
+        )
+        if save_netcdf:
+            _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
+        end = time()
+
+        # Print message
+        if self.verbose:
             msg = f"Making {CFT_DS_FILENAME}"
             if save_netcdf:
                 msg = msg.replace("Making", "Making and saving")
-            start = time()
-            self.cft_ds = self._read_and_process_files(
-                self.n_pfts,
-                start_file_year,
-                end_file_year,
-            )
-            if save_netcdf:
-                _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
-            end = time()
-            if self.verbose:
-                print(f"{msg} took {int(end - start)} s")
+            print(f"{msg} took {int(end - start)} s")
 
     def _get_cft_ds_filepath(self):
         # Get path
