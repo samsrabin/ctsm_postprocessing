@@ -320,7 +320,14 @@ class CropCase:
         )
 
         # Determine whether to save netCDF
-        user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
+        if not os.path.exists(self.cft_ds_dir):
+            try:
+                os.makedirs(self.cft_ds_dir, exist_ok=True)
+                user_has_write_perms = True
+            except PermissionError:
+                user_has_write_perms = False
+        else:
+            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
         self.save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
         if not any([self.save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
             print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")

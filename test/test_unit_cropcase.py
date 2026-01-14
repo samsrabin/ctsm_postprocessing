@@ -146,10 +146,13 @@ class TestGetCftDsFilepath:
 
     @patch("os.access", return_value=False)
     @patch("builtins.print")
-    def test_returns_no_perms_when_not_writable(self, mock_print, _mock_access):
+    def test_returns_no_perms_when_not_writable(self, mock_print, _mock_access, tmp_path):
         """Test that sets save_netcdf to False when directory is not writable"""
         crop_case = CropCase._create_empty()
-        crop_case.file_dir = os.path.join("some", "dir")
+        # Use an existing directory
+        existing_dir = str(tmp_path / "existing_dir")
+        os.makedirs(existing_dir, exist_ok=True)
+        crop_case.file_dir = existing_dir
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
@@ -220,6 +223,43 @@ class TestGetCftDsFilepath:
         crop_case._get_cft_ds_filepath()
 
         assert crop_case.read_history_files is True
+
+    def test_creates_cft_ds_dir_if_not_exists(self, tmp_path):
+        """Test that cft_ds_dir is created if it doesn't exist"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        # Set cft_ds_dir to a non-existent subdirectory
+        nonexistent_dir = tmp_path / "subdir" / "nested"
+        crop_case.cft_ds_dir = str(nonexistent_dir)
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+
+        # Directory should not exist yet
+        assert not os.path.exists(nonexistent_dir)
+
+        crop_case._get_cft_ds_filepath()
+
+        # Directory should now exist
+        assert os.path.exists(nonexistent_dir)
+        assert os.path.isdir(nonexistent_dir)
+
+    @patch("os.makedirs", side_effect=PermissionError("Permission denied"))
+    @patch("builtins.print")
+    def test_handles_permission_error_on_makedirs(self, mock_print, _mock_makedirs):
+        """Test that PermissionError from os.makedirs is handled correctly"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = os.path.join("some", "dir")
+        crop_case.cft_ds_dir = os.path.join("nonexistent", "dir")
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+
+        crop_case._get_cft_ds_filepath()
+
+        # save_netcdf should be False due to permission error
+        assert crop_case.save_netcdf is False
+        # Should print a warning
+        mock_print.assert_called()
+        assert "can't write" in str(mock_print.call_args)
 
 
 class TestCreateCftDsFile:
