@@ -9,6 +9,7 @@ import sys
 import os
 import io
 from contextlib import redirect_stdout
+from unittest.mock import patch, MagicMock
 import numpy as np
 import xarray as xr
 import pytest
@@ -110,3 +111,151 @@ class TestGetCftDsFilepath:
         crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == custom_dir
+
+
+class TestCreateCftDsFile:
+    """Test the CropCase._create_cft_ds_file() method"""
+
+    @pytest.fixture(name="mock_crop_case")
+    def fixture_mock_crop_case(self, tmp_path, test_ds):
+        """Create a CropCase instance with mocked methods"""
+        crop_case = CropCase._create_empty()
+        crop_case.cft_ds_dir = str(tmp_path)
+        crop_case.cft_ds_file = os.path.join(str(tmp_path), CFT_DS_FILENAME)
+        crop_case.force_new_cft_ds_file = False
+        crop_case.force_no_cft_ds_file = False
+        crop_case.n_pfts = 78
+        crop_case.verbose = False
+
+        # Mock _read_and_process_files to return a test dataset
+        crop_case._read_and_process_files = MagicMock(return_value=test_ds)
+
+        return crop_case
+
+    def test_file_exists_no_force_skips_creation(self, mock_crop_case, tmp_path):
+        """Test that if file exists and no force flags, creation is skipped"""
+        # Create the file
+        cft_ds_file = tmp_path / CFT_DS_FILENAME
+        cft_ds_file.touch()
+
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # _read_and_process_files should not be called
+        mock_crop_case._read_and_process_files.assert_not_called()
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_force_new_file_recreates_existing(self, mock_save, mock_crop_case, tmp_path):
+        """Test that force_new_cft_ds_file recreates even if file exists"""
+        # Create the file
+        cft_ds_file = tmp_path / CFT_DS_FILENAME
+        cft_ds_file.touch()
+
+        mock_crop_case.force_new_cft_ds_file = True
+
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # _read_and_process_files should be called
+        mock_crop_case._read_and_process_files.assert_called_once()
+        # Should save the file
+        mock_save.assert_called_once()
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_file_not_exists_creates_and_saves(self, mock_save, mock_crop_case, test_ds):
+        """Test that if file doesn't exist, it's created and saved"""
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # _read_and_process_files should be called with None years (to read all)
+        mock_crop_case._read_and_process_files.assert_called_once_with(
+            mock_crop_case.n_pfts, None, None
+        )
+        # Should save the file
+        mock_save.assert_called_once_with(test_ds, mock_crop_case.cft_ds_file, False)
+        # cft_ds should be set
+        assert mock_crop_case.cft_ds is test_ds
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_force_no_file_reads_but_doesnt_save(self, mock_save, mock_crop_case):
+        """Test that force_no_cft_ds_file reads data but doesn't save"""
+        mock_crop_case.force_no_cft_ds_file = True
+
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # _read_and_process_files should be called with the specified years
+        mock_crop_case._read_and_process_files.assert_called_once_with(
+            mock_crop_case.n_pfts, 2000, 2010
+        )
+        # Should NOT save the file
+        mock_save.assert_not_called()
+        # cft_ds should still be set
+        assert hasattr(mock_crop_case, "cft_ds")
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    @patch("os.access", return_value=False)
+    @patch("builtins.print")
+    def test_no_write_permission_reads_but_doesnt_save(
+        self, mock_print, _mock_access, mock_save, mock_crop_case
+    ):
+        """Test that without write permissions, data is read but not saved"""
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # _read_and_process_files should be called with the specified years
+        mock_crop_case._read_and_process_files.assert_called_once_with(
+            mock_crop_case.n_pfts, 2000, 2010
+        )
+        # Should NOT save the file
+        mock_save.assert_not_called()
+        # Should print a warning
+        mock_print.assert_called()
+        assert "can't write" in str(mock_print.call_args)
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_verbose_output(self, mock_save, mock_crop_case):
+        """Test that verbose mode produces output"""
+        # pylint: disable=unused-argument
+        mock_crop_case.verbose = True
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        output = f.getvalue()
+        assert "took" in output
+        assert "s" in output
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_save_netcdf_reads_all_years(self, mock_save, mock_crop_case):
+        """Test that when saving netCDF, all years are read (None, None)"""
+        # pylint: disable=unused-argument
+        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        # Should read all years when saving
+        mock_crop_case._read_and_process_files.assert_called_once_with(
+            mock_crop_case.n_pfts, None, None
+        )
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_no_save_reads_specified_years(self, mock_save, mock_crop_case):
+        """Test that when not saving, specified years are read"""
+        mock_crop_case.force_no_cft_ds_file = True
+
+        mock_crop_case._create_cft_ds_file(start_year=1995, end_year=2005)
+
+        # Should read only specified years when not saving
+        mock_crop_case._read_and_process_files.assert_called_once_with(
+            mock_crop_case.n_pfts, 1995, 2005
+        )
+        mock_save.assert_not_called()
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_message_changes_when_saving(self, mock_save, mock_crop_case):
+        """Test that the message indicates 'Making and saving' when saving"""
+        # pylint: disable=unused-argument
+        mock_crop_case.verbose = True
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+
+        output = f.getvalue()
+        assert "Making and saving" in output
+        assert CFT_DS_FILENAME in output
