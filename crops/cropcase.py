@@ -327,6 +327,7 @@ class CropCase:
             self._get_cft_ds_file_scratch()
             if self.cft_ds_file_scratch and os.path.exists(self.cft_ds_file_scratch):
                 self.cft_ds_file = self.cft_ds_file_scratch
+                self.cft_ds_dir = os.path.dirname(self.cft_ds_file)
                 print(f"Reading cft_ds from $SCRATCH: {self.cft_ds_file}")
 
         # Determine whether to read history files

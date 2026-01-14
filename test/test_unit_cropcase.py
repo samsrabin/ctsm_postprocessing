@@ -249,6 +249,7 @@ class TestGetCftDsFilepath:
         """Test that cft_ds_file uses scratch location when file exists there but not in primary"""
         with TemporaryDirectory() as scratch_dir:
             base_crop_case.file_dir = str(tmp_path)
+            base_crop_case.cft_ds_dir = None
             base_crop_case.name = "test_case"
 
             # Create the scratch file
@@ -264,6 +265,8 @@ class TestGetCftDsFilepath:
 
             # Should use the scratch file
             assert base_crop_case.cft_ds_file == scratch_file_path
+            # cft_ds_dir should be updated to the scratch directory
+            assert base_crop_case.cft_ds_dir == os.path.dirname(scratch_file_path)
             # Should print a message about reading from scratch
             mock_print.assert_called()
             assert "Reading cft_ds from $SCRATCH" in str(mock_print.call_args)
