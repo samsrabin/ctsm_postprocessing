@@ -161,6 +161,66 @@ class TestGetCftDsFilepath:
         mock_print.assert_called()
         assert "can't write" in str(mock_print.call_args)
 
+    def test_read_history_files_true_when_file_not_exists(self, tmp_path):
+        """Test that read_history_files is True when cft_ds file doesn't exist"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+
+        read_history_files, _ = crop_case._get_cft_ds_filepath()
+
+        assert read_history_files is True
+
+    def test_read_history_files_false_when_file_exists(self, tmp_path):
+        """Test that read_history_files is False when cft_ds file exists"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+
+        # Create the file
+        cft_ds_file = tmp_path / CFT_DS_FILENAME
+        cft_ds_file.touch()
+
+        read_history_files, _ = crop_case._get_cft_ds_filepath()
+
+        assert read_history_files is False
+
+    def test_read_history_files_true_when_force_new_file(self, tmp_path):
+        """Test that read_history_files is True when force_new_cft_ds_file is True"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = True
+
+        # Create the file (should still read because of force flag)
+        cft_ds_file = tmp_path / CFT_DS_FILENAME
+        cft_ds_file.touch()
+
+        read_history_files, _ = crop_case._get_cft_ds_filepath()
+
+        assert read_history_files is True
+
+    def test_read_history_files_true_when_force_no_file(self, tmp_path):
+        """Test that read_history_files is True when force_no_cft_ds_file is True"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = True
+        crop_case.force_new_cft_ds_file = False
+
+        # Create the file (should still read because of force flag)
+        cft_ds_file = tmp_path / CFT_DS_FILENAME
+        cft_ds_file.touch()
+
+        read_history_files, _ = crop_case._get_cft_ds_filepath()
+
+        assert read_history_files is True
+
 
 class TestCreateCftDsFile:
     """Test the CropCase._create_cft_ds_file() method"""
@@ -180,19 +240,6 @@ class TestCreateCftDsFile:
         crop_case._read_and_process_files = MagicMock(return_value=test_ds)
 
         return crop_case
-
-    def test_file_exists_no_force_skips_creation(self, mock_crop_case, tmp_path):
-        """Test that if file exists and no force flags, creation is skipped"""
-        # Create the file
-        cft_ds_file = tmp_path / CFT_DS_FILENAME
-        cft_ds_file.touch()
-
-        mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, read_history_files=False, save_netcdf=True
-        )
-
-        # _read_and_process_files should not be called
-        mock_crop_case._read_and_process_files.assert_not_called()
 
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
     def test_force_new_file_recreates_existing(self, mock_save, mock_crop_case, tmp_path):
@@ -319,3 +366,13 @@ class TestCreateCftDsFile:
         output = f.getvalue()
         assert "Making and saving" in output
         assert CFT_DS_FILENAME in output
+
+    @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
+    def test_read_history_files_false_skips_processing(self, mock_crop_case):
+        """Test that when read_history_files=False, no processing occurs"""
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, read_history_files=False, save_netcdf=True
+        )
+
+        # _read_and_process_files should not be called when read_history_files=False
+        mock_crop_case._read_and_process_files.assert_not_called()
