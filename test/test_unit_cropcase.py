@@ -67,7 +67,7 @@ class TestSaveCftDsToNetcdf:
 class TestGetCftDsFilepath:
     """Test the CropCase._get_cft_ds_filepath() method"""
 
-    def test_with_none_uses_file_dir(self, tmp_path):
+    def test_with_none_uses_file_dir(self):
         """Test that cft_ds_dir=None uses self.file_dir"""
         crop_case = CropCase._create_empty()
         file_dir = os.path.join("some", "test", "directory")
@@ -76,7 +76,7 @@ class TestGetCftDsFilepath:
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
 
-        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
+        crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == file_dir
         assert crop_case.cft_ds_file == os.path.join(file_dir, CFT_DS_FILENAME)
@@ -90,7 +90,7 @@ class TestGetCftDsFilepath:
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
 
-        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
+        crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == custom_dir
         assert crop_case.cft_ds_file == os.path.join(custom_dir, CFT_DS_FILENAME)
@@ -128,7 +128,7 @@ class TestGetCftDsFilepath:
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
 
-        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
+        _, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is True
 
@@ -140,7 +140,7 @@ class TestGetCftDsFilepath:
         crop_case.force_no_cft_ds_file = True
         crop_case.force_new_cft_ds_file = False
 
-        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
+        _, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is False
 
@@ -154,7 +154,7 @@ class TestGetCftDsFilepath:
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
 
-        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
+        _, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is False
         # Should print a warning
