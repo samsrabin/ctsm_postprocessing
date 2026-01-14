@@ -74,8 +74,9 @@ class TestGetCftDsFilepath:
         crop_case.file_dir = file_dir
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
-        crop_case._get_cft_ds_filepath()
+        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == file_dir
         assert crop_case.cft_ds_file == os.path.join(file_dir, CFT_DS_FILENAME)
@@ -87,8 +88,9 @@ class TestGetCftDsFilepath:
         custom_dir = str(tmp_path)
         crop_case.cft_ds_dir = custom_dir
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
-        crop_case._get_cft_ds_filepath()
+        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == custom_dir
         assert crop_case.cft_ds_file == os.path.join(custom_dir, CFT_DS_FILENAME)
@@ -99,6 +101,7 @@ class TestGetCftDsFilepath:
         crop_case.file_dir = os.path.join("my", "file", "dir")
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
@@ -111,6 +114,7 @@ class TestGetCftDsFilepath:
         custom_dir = str(tmp_path)
         crop_case.cft_ds_dir = custom_dir
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
@@ -122,8 +126,9 @@ class TestGetCftDsFilepath:
         crop_case.file_dir = str(tmp_path)
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
-        save_netcdf = crop_case._get_cft_ds_filepath()
+        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is True
 
@@ -133,8 +138,9 @@ class TestGetCftDsFilepath:
         crop_case.file_dir = str(tmp_path)
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = True
+        crop_case.force_new_cft_ds_file = False
 
-        save_netcdf = crop_case._get_cft_ds_filepath()
+        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is False
 
@@ -146,8 +152,9 @@ class TestGetCftDsFilepath:
         crop_case.file_dir = os.path.join("some", "dir")
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
 
-        save_netcdf = crop_case._get_cft_ds_filepath()
+        read_history_files, save_netcdf = crop_case._get_cft_ds_filepath()
 
         assert save_netcdf is False
         # Should print a warning
@@ -181,7 +188,7 @@ class TestCreateCftDsFile:
         cft_ds_file.touch()
 
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=True
+            start_year=2000, end_year=2010, read_history_files=False, save_netcdf=True
         )
 
         # _read_and_process_files should not be called
@@ -197,7 +204,7 @@ class TestCreateCftDsFile:
         mock_crop_case.force_new_cft_ds_file = True
 
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=True
+            start_year=2000, end_year=2010, read_history_files=True, save_netcdf=True
         )
 
         # _read_and_process_files should be called
@@ -209,7 +216,7 @@ class TestCreateCftDsFile:
     def test_file_not_exists_creates_and_saves(self, mock_save, mock_crop_case, test_ds):
         """Test that if file doesn't exist, it's created and saved"""
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=True
+            start_year=2000, end_year=2010, read_history_files=True, save_netcdf=True
         )
 
         # _read_and_process_files should be called with None years (to read all)
@@ -227,7 +234,7 @@ class TestCreateCftDsFile:
         mock_crop_case.force_no_cft_ds_file = True
 
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=False
+            start_year=2000, end_year=2010, read_history_files=True, save_netcdf=False
         )
 
         # _read_and_process_files should be called with the specified years
@@ -243,7 +250,7 @@ class TestCreateCftDsFile:
     def test_no_write_permission_reads_but_doesnt_save(self, mock_save, mock_crop_case):
         """Test that without write permissions, data is read but not saved"""
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=False
+            start_year=2000, end_year=2010, read_history_files=True, save_netcdf=False
         )
 
         # _read_and_process_files should be called with the specified years
@@ -262,7 +269,7 @@ class TestCreateCftDsFile:
         f = io.StringIO()
         with redirect_stdout(f):
             mock_crop_case._create_cft_ds_file(
-                start_year=2000, end_year=2010, save_netcdf=True
+                start_year=2000, end_year=2010, read_history_files=True, save_netcdf=True
             )
 
         output = f.getvalue()
@@ -274,7 +281,7 @@ class TestCreateCftDsFile:
         """Test that when saving netCDF, all years are read (None, None)"""
         # pylint: disable=unused-argument
         mock_crop_case._create_cft_ds_file(
-            start_year=2000, end_year=2010, save_netcdf=True
+            start_year=2000, end_year=2010, read_history_files=True, save_netcdf=True
         )
 
         # Should read all years when saving
@@ -288,7 +295,7 @@ class TestCreateCftDsFile:
         mock_crop_case.force_no_cft_ds_file = True
 
         mock_crop_case._create_cft_ds_file(
-            start_year=1995, end_year=2005, save_netcdf=False
+            start_year=1995, end_year=2005, read_history_files=True, save_netcdf=False
         )
 
         # Should read only specified years when not saving
@@ -306,7 +313,7 @@ class TestCreateCftDsFile:
         f = io.StringIO()
         with redirect_stdout(f):
             mock_crop_case._create_cft_ds_file(
-                start_year=2000, end_year=2010, save_netcdf=True
+                start_year=2000, end_year=2010, read_history_files=True, save_netcdf=True
             )
 
         output = f.getvalue()
