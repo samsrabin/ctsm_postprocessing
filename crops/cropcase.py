@@ -184,6 +184,8 @@ class CropCase:
         self.name = name
         self.cft_ds_dir = cft_ds_dir
         self.file_dir = file_dir
+        self.cft_ds_file = None
+        self.cft_ds_file_scratch = None
         self.file_list = []
         self.cft_list = None
         self.crop_list = None
@@ -306,11 +308,26 @@ class CropCase:
                 msg = msg.replace("Making", "Making and saving")
             print(f"{msg} took {int(end - start)} s")
 
+    def _get_cft_ds_file_scratch(self):
+        scratch_dir = os.environ["SCRATCH"]
+        if not scratch_dir:
+            return
+        self.cft_ds_file_scratch = os.path.join(
+            scratch_dir, "clm_crop_case_cft_ds_files", self.name, CFT_DS_FILENAME
+        )
+
     def _get_cft_ds_filepath(self):
         # Get path
         if self.cft_ds_dir is None:
             self.cft_ds_dir = self.file_dir
         self.cft_ds_file = os.path.join(self.cft_ds_dir, CFT_DS_FILENAME)
+
+        # If cft_ds file not found, see if it can be found in the scratch location
+        if not os.path.exists(self.cft_ds_file):
+            self._get_cft_ds_file_scratch()
+            if self.cft_ds_file_scratch and os.path.exists(self.cft_ds_file_scratch):
+                self.cft_ds_file = self.cft_ds_file_scratch
+                print(f"Reading cft_ds from $SCRATCH: {self.cft_ds_file}")
 
         # Determine whether to read history files
         self.read_history_files = (

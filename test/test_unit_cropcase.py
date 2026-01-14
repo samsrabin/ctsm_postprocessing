@@ -10,6 +10,7 @@ import os
 import io
 from contextlib import redirect_stdout
 from unittest.mock import patch, MagicMock
+from tempfile import TemporaryDirectory
 import numpy as np
 import xarray as xr
 import pytest
@@ -67,6 +68,7 @@ class TestSaveCftDsToNetcdf:
 class TestGetCftDsFilepath:
     """Test the CropCase._get_cft_ds_filepath() method"""
 
+    @patch.dict(os.environ, {"SCRATCH": ""}, clear=False)
     def test_with_none_uses_file_dir(self):
         """Test that cft_ds_dir=None uses self.file_dir"""
         crop_case = CropCase._create_empty()
@@ -75,6 +77,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -89,6 +93,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = custom_dir
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -102,6 +108,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -115,6 +123,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = custom_dir
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -127,6 +137,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -139,6 +151,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = True
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -156,6 +170,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -171,6 +187,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -183,6 +201,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         # Create the file
         cft_ds_file = tmp_path / CFT_DS_FILENAME
@@ -199,6 +219,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = True
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         # Create the file (should still read because of force flag)
         cft_ds_file = tmp_path / CFT_DS_FILENAME
@@ -215,6 +237,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = None
         crop_case.force_no_cft_ds_file = True
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         # Create the file (should still read because of force flag)
         cft_ds_file = tmp_path / CFT_DS_FILENAME
@@ -233,6 +257,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = str(nonexistent_dir)
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         # Directory should not exist yet
         assert not os.path.exists(nonexistent_dir)
@@ -252,6 +278,8 @@ class TestGetCftDsFilepath:
         crop_case.cft_ds_dir = os.path.join("nonexistent", "dir")
         crop_case.force_no_cft_ds_file = False
         crop_case.force_new_cft_ds_file = False
+        crop_case.name = "some_case"
+        crop_case.cft_ds_file_scratch = None
 
         crop_case._get_cft_ds_filepath()
 
@@ -260,6 +288,75 @@ class TestGetCftDsFilepath:
         # Should print a warning
         mock_print.assert_called()
         assert "can't write" in str(mock_print.call_args)
+
+    @patch.dict(os.environ, {"SCRATCH": ""}, clear=False)  # Ensure SCRATCH env var is empty
+    def test_no_scratch_fallback_when_scratch_empty(self, tmp_path):
+        """Test that scratch fallback doesn't happen when SCRATCH is empty"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+        crop_case.name = "test_case"
+        crop_case.cft_ds_file_scratch = None
+
+        # Don't create the file in the primary location
+
+        crop_case._get_cft_ds_filepath()
+
+        # Should still use the primary location, not scratch
+        expected_file = os.path.join(str(tmp_path), CFT_DS_FILENAME)
+        assert crop_case.cft_ds_file == expected_file
+        assert crop_case.cft_ds_file_scratch is None
+
+    @patch("builtins.print")
+    def test_uses_scratch_when_file_exists_there(self, mock_print, tmp_path):
+        """Test that cft_ds_file uses scratch location when file exists there but not in primary"""
+        with TemporaryDirectory() as scratch_dir:
+            crop_case = CropCase._create_empty()
+            crop_case.file_dir = str(tmp_path)
+            crop_case.cft_ds_dir = None
+            crop_case.force_no_cft_ds_file = False
+            crop_case.force_new_cft_ds_file = False
+            crop_case.name = "test_case"
+            crop_case.cft_ds_file_scratch = None
+
+            # Create the scratch file
+            scratch_file_path = os.path.join(
+                scratch_dir, "clm_crop_case_cft_ds_files", "test_case", CFT_DS_FILENAME
+            )
+            os.makedirs(os.path.dirname(scratch_file_path), exist_ok=True)
+            with open(scratch_file_path, 'w', encoding='utf-8') as f:
+                f.write("test")
+
+            with patch.dict(os.environ, {"SCRATCH": scratch_dir}, clear=False):
+                crop_case._get_cft_ds_filepath()
+
+            # Should use the scratch file
+            assert crop_case.cft_ds_file == scratch_file_path
+            # Should print a message about reading from scratch
+            mock_print.assert_called()
+            assert "Reading cft_ds from $SCRATCH" in str(mock_print.call_args)
+
+    # @patch.dict decorator ensures there is a SCRATCH var defined in the environment
+    @patch.dict(os.environ, {"SCRATCH": os.path.join("mock", "scratch")}, clear=False)
+    def test_no_scratch_fallback_when_file_not_in_scratch(self, tmp_path):
+        """Test that primary location is used when scratch file doesn't exist"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+        crop_case.force_new_cft_ds_file = False
+        crop_case.name = "test_case"
+        crop_case.cft_ds_file_scratch = None
+
+        # Don't create the file anywhere
+
+        crop_case._get_cft_ds_filepath()
+
+        # Should use the primary location since scratch file doesn't exist
+        expected_file = os.path.join(str(tmp_path), CFT_DS_FILENAME)
+        assert crop_case.cft_ds_file == expected_file
 
 
 class TestCreateCftDsFile:
