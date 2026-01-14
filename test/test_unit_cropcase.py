@@ -67,24 +67,26 @@ class TestSaveCftDsToNetcdf:
 class TestGetCftDsFilepath:
     """Test the CropCase._get_cft_ds_filepath() method"""
 
-    def test_with_none_uses_file_dir(self):
+    def test_with_none_uses_file_dir(self, tmp_path):
         """Test that cft_ds_dir=None uses self.file_dir"""
         crop_case = CropCase._create_empty()
         file_dir = os.path.join("some", "test", "directory")
         crop_case.file_dir = file_dir
         crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == file_dir
         assert crop_case.cft_ds_file == os.path.join(file_dir, CFT_DS_FILENAME)
 
-    def test_with_custom_dir(self):
+    def test_with_custom_dir(self, tmp_path):
         """Test that a custom cft_ds_dir is preserved"""
         crop_case = CropCase._create_empty()
         crop_case.file_dir = os.path.join("some", "test", "directory")
-        custom_dir = os.path.join("custom", "output", "path")
+        custom_dir = str(tmp_path)
         crop_case.cft_ds_dir = custom_dir
+        crop_case.force_no_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
@@ -96,21 +98,61 @@ class TestGetCftDsFilepath:
         crop_case = CropCase._create_empty()
         crop_case.file_dir = os.path.join("my", "file", "dir")
         crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == crop_case.file_dir
 
-    def test_cft_ds_dir_preserved_when_not_none(self):
+    def test_cft_ds_dir_preserved_when_not_none(self, tmp_path):
         """Test that cft_ds_dir is preserved when it's not None"""
         crop_case = CropCase._create_empty()
         crop_case.file_dir = os.path.join("original", "dir")
-        custom_dir = os.path.join("different", "dir")
+        custom_dir = str(tmp_path)
         crop_case.cft_ds_dir = custom_dir
+        crop_case.force_no_cft_ds_file = False
 
         crop_case._get_cft_ds_filepath()
 
         assert crop_case.cft_ds_dir == custom_dir
+
+    def test_returns_save_netcdf_when_writable(self, tmp_path):
+        """Test that returns correct values when directory is writable"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+
+        save_netcdf = crop_case._get_cft_ds_filepath()
+
+        assert save_netcdf is True
+
+    def test_returns_no_save_when_force_no_file(self, tmp_path):
+        """Test that save_netcdf is False when force_no_cft_ds_file is True"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = str(tmp_path)
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = True
+
+        save_netcdf = crop_case._get_cft_ds_filepath()
+
+        assert save_netcdf is False
+
+    @patch("os.access", return_value=False)
+    @patch("builtins.print")
+    def test_returns_no_perms_when_not_writable(self, mock_print, _mock_access):
+        """Test that returns correct values when directory is not writable"""
+        crop_case = CropCase._create_empty()
+        crop_case.file_dir = os.path.join("some", "dir")
+        crop_case.cft_ds_dir = None
+        crop_case.force_no_cft_ds_file = False
+
+        save_netcdf = crop_case._get_cft_ds_filepath()
+
+        assert save_netcdf is False
+        # Should print a warning
+        mock_print.assert_called()
+        assert "can't write" in str(mock_print.call_args)
 
 
 class TestCreateCftDsFile:
@@ -138,7 +180,9 @@ class TestCreateCftDsFile:
         cft_ds_file = tmp_path / CFT_DS_FILENAME
         cft_ds_file.touch()
 
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=True
+        )
 
         # _read_and_process_files should not be called
         mock_crop_case._read_and_process_files.assert_not_called()
@@ -152,7 +196,9 @@ class TestCreateCftDsFile:
 
         mock_crop_case.force_new_cft_ds_file = True
 
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=True
+        )
 
         # _read_and_process_files should be called
         mock_crop_case._read_and_process_files.assert_called_once()
@@ -162,7 +208,9 @@ class TestCreateCftDsFile:
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
     def test_file_not_exists_creates_and_saves(self, mock_save, mock_crop_case, test_ds):
         """Test that if file doesn't exist, it's created and saved"""
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=True
+        )
 
         # _read_and_process_files should be called with None years (to read all)
         mock_crop_case._read_and_process_files.assert_called_once_with(
@@ -178,7 +226,9 @@ class TestCreateCftDsFile:
         """Test that force_no_cft_ds_file reads data but doesn't save"""
         mock_crop_case.force_no_cft_ds_file = True
 
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=False
+        )
 
         # _read_and_process_files should be called with the specified years
         mock_crop_case._read_and_process_files.assert_called_once_with(
@@ -190,13 +240,11 @@ class TestCreateCftDsFile:
         assert hasattr(mock_crop_case, "cft_ds")
 
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
-    @patch("os.access", return_value=False)
-    @patch("builtins.print")
-    def test_no_write_permission_reads_but_doesnt_save(
-        self, mock_print, _mock_access, mock_save, mock_crop_case
-    ):
+    def test_no_write_permission_reads_but_doesnt_save(self, mock_save, mock_crop_case):
         """Test that without write permissions, data is read but not saved"""
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=False
+        )
 
         # _read_and_process_files should be called with the specified years
         mock_crop_case._read_and_process_files.assert_called_once_with(
@@ -204,29 +252,30 @@ class TestCreateCftDsFile:
         )
         # Should NOT save the file
         mock_save.assert_not_called()
-        # Should print a warning
-        mock_print.assert_called()
-        assert "can't write" in str(mock_print.call_args)
 
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
-    def test_verbose_output(self, mock_save, mock_crop_case):
+    def test_verbose_output(self, _mock_save, mock_crop_case):
         """Test that verbose mode produces output"""
         # pylint: disable=unused-argument
         mock_crop_case.verbose = True
 
         f = io.StringIO()
         with redirect_stdout(f):
-            mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+            mock_crop_case._create_cft_ds_file(
+                start_year=2000, end_year=2010, save_netcdf=True
+            )
 
         output = f.getvalue()
         assert "took" in output
         assert "s" in output
 
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
-    def test_save_netcdf_reads_all_years(self, mock_save, mock_crop_case):
+    def test_save_netcdf_reads_all_years(self, _mock_save, mock_crop_case):
         """Test that when saving netCDF, all years are read (None, None)"""
         # pylint: disable=unused-argument
-        mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+        mock_crop_case._create_cft_ds_file(
+            start_year=2000, end_year=2010, save_netcdf=True
+        )
 
         # Should read all years when saving
         mock_crop_case._read_and_process_files.assert_called_once_with(
@@ -238,7 +287,9 @@ class TestCreateCftDsFile:
         """Test that when not saving, specified years are read"""
         mock_crop_case.force_no_cft_ds_file = True
 
-        mock_crop_case._create_cft_ds_file(start_year=1995, end_year=2005)
+        mock_crop_case._create_cft_ds_file(
+            start_year=1995, end_year=2005, save_netcdf=False
+        )
 
         # Should read only specified years when not saving
         mock_crop_case._read_and_process_files.assert_called_once_with(
@@ -247,14 +298,16 @@ class TestCreateCftDsFile:
         mock_save.assert_not_called()
 
     @patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf")
-    def test_message_changes_when_saving(self, mock_save, mock_crop_case):
+    def test_message_changes_when_saving(self, _mock_save, mock_crop_case):
         """Test that the message indicates 'Making and saving' when saving"""
         # pylint: disable=unused-argument
         mock_crop_case.verbose = True
 
         f = io.StringIO()
         with redirect_stdout(f):
-            mock_crop_case._create_cft_ds_file(start_year=2000, end_year=2010)
+            mock_crop_case._create_cft_ds_file(
+                start_year=2000, end_year=2010, save_netcdf=True
+            )
 
         output = f.getvalue()
         assert "Making and saving" in output

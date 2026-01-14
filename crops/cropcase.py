@@ -202,12 +202,13 @@ class CropCase:
                 raise KeyError(f"Which crop should {cft} be associated with?")
 
         # Get path to save cft_ds.nc
-        self._get_cft_ds_filepath()
+        save_netcdf = self._get_cft_ds_filepath()
 
         # Create CFT dataset file if needed
         self._create_cft_ds_file(
             start_year=start_year,
             end_year=end_year,
+            save_netcdf=save_netcdf,
         )
 
         # Open CFT dataset and slice based on years
@@ -276,19 +277,12 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
-    def _create_cft_ds_file(self, *, start_year, end_year):
+    def _create_cft_ds_file(self, *, start_year, end_year, save_netcdf):
         if (
             self.force_new_cft_ds_file
             or self.force_no_cft_ds_file
             or not os.path.exists(self.cft_ds_file)
         ):
-            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-            save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
-            if not any([save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
-                print(
-                    f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
-                )
-
             if save_netcdf:
                 # If we're generating cft_ds.nc, we'll read all years
                 start_file_year = None
@@ -315,6 +309,14 @@ class CropCase:
         if self.cft_ds_dir is None:
             self.cft_ds_dir = self.file_dir
         self.cft_ds_file = os.path.join(self.cft_ds_dir, CFT_DS_FILENAME)
+
+        # Determine write permissions and whether to save netCDF
+        user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
+        save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
+        if not any([save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
+            print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
+
+        return save_netcdf
 
     def __eq__(self, other):
         # Check that they're both CropCases
