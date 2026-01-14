@@ -189,12 +189,16 @@ class CropCase:
         self.crop_list = None
         self.force_new_cft_ds_file = force_new_cft_ds_file
         self.force_no_cft_ds_file = force_no_cft_ds_file
+        self.n_pfts = n_pfts
+        self.this_h_tape = this_h_tape
+        self.cfts_to_include = cfts_to_include
+        self.crops_to_include = crops_to_include
 
         # Check incompatible options
         if self.force_new_cft_ds_file and self.force_no_cft_ds_file:
             raise ValueError("force_new_cft_ds_file and force_no_cft_ds_file can't both be True")
-        for cft in cfts_to_include:
-            if not any(crop in cft for crop in crops_to_include):
+        for cft in self.cfts_to_include:
+            if not any(crop in cft for crop in self.crops_to_include):
                 raise KeyError(f"Which crop should {cft} be associated with?")
 
         # Get path to save cft_ds.nc
@@ -204,23 +208,19 @@ class CropCase:
         self._create_cft_ds_file(
             start_year=start_year,
             end_year=end_year,
-            n_pfts=n_pfts,
-            this_h_tape=this_h_tape,
-            cfts_to_include=cfts_to_include,
-            crops_to_include=crops_to_include,
         )
 
         # Open CFT dataset and slice based on years
         self._open_cft_ds_file(start_year, end_year)
 
         # Misc. things to do after opening CFT dataset
-        self._finish_cft_ds(n_pfts, cfts_to_include, crops_to_include)
+        self._finish_cft_ds()
 
-    def _finish_cft_ds(self, n_pfts, cfts_to_include, crops_to_include):
+    def _finish_cft_ds(self):
         # Get derived variables
         if self.cft_list is None:
-            self._get_cft_and_crop_lists(cfts_to_include, crops_to_include, n_pfts, self.cft_ds)
-        self.cft_ds = self._get_derived_variables(crops_to_include, self.cft_ds)
+            self._get_cft_and_crop_lists(self.n_pfts, self.cft_ds)
+        self.cft_ds = self._get_derived_variables(self.cft_ds)
 
         # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
         # Y+1. Here, we replace it to be simpler, where the timestep is just an integer year
@@ -276,9 +276,7 @@ class CropCase:
             end = time()
             print(f"Opening cft_ds took {int(end - start)} s")
 
-    def _create_cft_ds_file(
-        self, *, start_year, end_year, n_pfts, this_h_tape, cfts_to_include, crops_to_include
-    ):
+    def _create_cft_ds_file(self, *, start_year, end_year):
         if (
             self.force_new_cft_ds_file
             or self.force_no_cft_ds_file
@@ -302,12 +300,9 @@ class CropCase:
                 msg = msg.replace("Making", "Making and saving")
             start = time()
             self.cft_ds = self._read_and_process_files(
-                cfts_to_include,
-                crops_to_include,
-                n_pfts,
+                self.n_pfts,
                 start_file_year,
                 end_file_year,
-                this_h_tape,
             )
             if save_netcdf:
                 _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
@@ -355,13 +350,11 @@ class CropCase:
             return f"CropCase({self.cft_ds.attrs['case_id']})"
         return super().__repr__()
 
-    def _read_and_process_files(
-        self, cfts_to_include, crops_to_include, n_pfts, start_year, end_year, this_h_tape
-    ):
+    def _read_and_process_files(self, n_pfts, start_year, end_year):
         """
         Read all history files and create the "CFT dataset"
         """
-        self._get_file_list(start_year, end_year, this_h_tape)
+        self._get_file_list(start_year, end_year)
 
         # Read files
         # Adding join="override", compat="override", coords="minimal", doesn't fix the graph size
@@ -381,25 +374,27 @@ class CropCase:
         )
 
         # Get CFT and crop lists
-        self._get_cft_and_crop_lists(cfts_to_include, crops_to_include, n_pfts, ds)
+        self._get_cft_and_crop_lists(n_pfts, ds)
 
         # Process into CFT dataset
-        cft_ds = self._get_cft_ds(crops_to_include, ds)
+        cft_ds = self._get_cft_ds(ds)
 
         # Chunk
         cft_ds = cft_ds.chunk(chunks=CFT_DS_CHUNKING)
 
         return cft_ds
 
-    def _get_file_list(self, start_year, end_year, this_h_tape):
+    def _get_file_list(self, start_year, end_year):
         """
         Get the files to import
         """
         # Get the tape we need to import (h0i, h2a, etc.)
-        if this_h_tape is None:
-            this_h_tape = _get_crop_tape(self.file_dir, self.name)
+        if self.this_h_tape is None:
+            self.this_h_tape = _get_crop_tape(self.file_dir, self.name)
         # Get list of all files
-        file_pattern = os.path.join(self.file_dir, self.name + ".clm2." + this_h_tape + ".*.nc")
+        file_pattern = os.path.join(
+            self.file_dir, self.name + ".clm2." + self.this_h_tape + ".*.nc"
+        )
         file_list = np.sort(glob.glob(file_pattern))
         if len(file_list) == 0:
             raise FileNotFoundError("No files found matching pattern: " + file_pattern)
@@ -420,17 +415,17 @@ class CropCase:
         if not self.file_list:
             raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
 
-    def _get_cft_and_crop_lists(self, cfts_to_include, crops_to_include, n_pfts, ds):
+    def _get_cft_and_crop_lists(self, n_pfts, ds):
         """
         Get lists of CFTs and crops included in history
         """
         # Get CFT list
-        self.cft_list = CftList(ds, n_pfts, cfts_to_include=cfts_to_include)
+        self.cft_list = CftList(ds, n_pfts, cfts_to_include=self.cfts_to_include)
 
         # Get crop list
-        self.crop_list = CropList(crops_to_include, self.cft_list, ds)
+        self.crop_list = CropList(self.crops_to_include, self.cft_list, ds)
 
-    def _get_cft_ds(self, crops_to_include, ds):
+    def _get_cft_ds(self, ds):
         """
         Postprocess the history dataset into the "CFT dataset"
         """
@@ -467,7 +462,7 @@ class CropCase:
 
         return cft_ds
 
-    def _get_derived_variables(self, crops_to_include, cft_ds):
+    def _get_derived_variables(self, cft_ds):
         if self.verbose:
             start = time()
             print("Getting secondary variables")
@@ -487,7 +482,7 @@ class CropCase:
             print(f"Secondary variables took {int(end - start)} s")
 
         # Get more stuff
-        cft_ds = extra_area_prod_yield_etc(crops_to_include, self, cft_ds)
+        cft_ds = extra_area_prod_yield_etc(self.crops_to_include, self, cft_ds)
         cft_ds = get_crop_biomass_vars(cft_ds, self.name)
         return cft_ds
 
