@@ -284,15 +284,16 @@ class CropCase:
         ):
             user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
             save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
+            if not any([save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
+                print(
+                    f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
+                )
+
             if save_netcdf:
                 # If we're generating cft_ds.nc, we'll read all years
                 start_file_year = None
                 end_file_year = None
             else:
-                if not user_has_write_perms and not self.force_no_cft_ds_file:
-                    print(
-                        f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
-                    )
                 start_file_year = start_year
                 end_file_year = end_year
             msg = f"Making {CFT_DS_FILENAME}"
