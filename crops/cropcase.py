@@ -182,6 +182,7 @@ class CropCase:
         """
         self.verbose = verbose
         self.name = name
+        self.cft_ds_dir = cft_ds_dir
         self.file_dir = file_dir
         self.file_list = []
         self.cft_list = None
@@ -194,12 +195,12 @@ class CropCase:
             if not any(crop in cft for crop in crops_to_include):
                 raise KeyError(f"Which crop should {cft} be associated with?")
 
+        # Get path to save cft_ds.nc
+        self._get_cft_ds_filepath()
+
         # Create CFT dataset file if needed
-        if cft_ds_dir is None:
-            cft_ds_dir = self.file_dir
-        self.cft_ds_file = os.path.join(cft_ds_dir, CFT_DS_FILENAME)
         if force_new_cft_ds_file or force_no_cft_ds_file or not os.path.exists(self.cft_ds_file):
-            user_has_write_perms = os.access(cft_ds_dir, os.W_OK)
+            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
             save_netcdf = user_has_write_perms and not force_no_cft_ds_file
             if save_netcdf:
                 # If we're generating cft_ds.nc, we'll read all years
@@ -207,7 +208,7 @@ class CropCase:
                 end_file_year = None
             else:
                 if not user_has_write_perms and not force_no_cft_ds_file:
-                    print(f"User can't write in {cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
+                    print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
                 start_file_year = start_year
                 end_file_year = end_year
             msg = f"Making {CFT_DS_FILENAME}"
@@ -256,6 +257,8 @@ class CropCase:
             print(f"Opening cft_ds took {int(end - start)} s")
 
         # Get derived variables
+        if self.cft_list is None:
+            self._get_cft_and_crop_lists(cfts_to_include, crops_to_include, n_pfts, self.cft_ds)
         self.cft_ds = self._get_derived_variables(crops_to_include, self.cft_ds)
 
         # The time axis is weird: Timestep Y-01-01 00:00:00 actually has data for calendar year
@@ -284,6 +287,11 @@ class CropCase:
                 rename_dict[v] = v.replace("failed", "unmarketable")
         if rename_dict:
             self.cft_ds = self.cft_ds.rename(rename_dict)
+
+    def _get_cft_ds_filepath(self):
+        if self.cft_ds_dir is None:
+            self.cft_ds_dir = self.file_dir
+        self.cft_ds_file = os.path.join(self.cft_ds_dir, CFT_DS_FILENAME)
 
     def __eq__(self, other):
         # Check that they're both CropCases
