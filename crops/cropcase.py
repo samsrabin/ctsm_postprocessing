@@ -187,9 +187,11 @@ class CropCase:
         self.file_list = []
         self.cft_list = None
         self.crop_list = None
+        self.force_new_cft_ds_file = force_new_cft_ds_file
+        self.force_no_cft_ds_file = force_no_cft_ds_file
 
         # Check incompatible options
-        if force_new_cft_ds_file and force_no_cft_ds_file:
+        if self.force_new_cft_ds_file and self.force_no_cft_ds_file:
             raise ValueError("force_new_cft_ds_file and force_no_cft_ds_file can't both be True")
         for cft in cfts_to_include:
             if not any(crop in cft for crop in crops_to_include):
@@ -199,15 +201,15 @@ class CropCase:
         self._get_cft_ds_filepath()
 
         # Create CFT dataset file if needed
-        if force_new_cft_ds_file or force_no_cft_ds_file or not os.path.exists(self.cft_ds_file):
+        if self.force_new_cft_ds_file or self.force_no_cft_ds_file or not os.path.exists(self.cft_ds_file):
             user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-            save_netcdf = user_has_write_perms and not force_no_cft_ds_file
+            save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
             if save_netcdf:
                 # If we're generating cft_ds.nc, we'll read all years
                 start_file_year = None
                 end_file_year = None
             else:
-                if not user_has_write_perms and not force_no_cft_ds_file:
+                if not user_has_write_perms and not self.force_no_cft_ds_file:
                     print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
                 start_file_year = start_year
                 end_file_year = end_year
@@ -230,7 +232,7 @@ class CropCase:
                 print(f"{msg} took {int(end - start)} s")
 
         # Open CFT dataset and slice based on years
-        if os.path.exists(self.cft_ds_file) and not force_no_cft_ds_file:
+        if os.path.exists(self.cft_ds_file) and not self.force_no_cft_ds_file:
             # Always prefer to read from the file, to ensure consistency of performance
             self.cft_ds = None
             start = time()
