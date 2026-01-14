@@ -201,35 +201,14 @@ class CropCase:
         self._get_cft_ds_filepath()
 
         # Create CFT dataset file if needed
-        if self.force_new_cft_ds_file or self.force_no_cft_ds_file or not os.path.exists(self.cft_ds_file):
-            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-            save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
-            if save_netcdf:
-                # If we're generating cft_ds.nc, we'll read all years
-                start_file_year = None
-                end_file_year = None
-            else:
-                if not user_has_write_perms and not self.force_no_cft_ds_file:
-                    print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
-                start_file_year = start_year
-                end_file_year = end_year
-            msg = f"Making {CFT_DS_FILENAME}"
-            if save_netcdf:
-                msg = msg.replace("Making", "Making and saving")
-            start = time()
-            self.cft_ds = self._read_and_process_files(
-                cfts_to_include,
-                crops_to_include,
-                n_pfts,
-                start_file_year,
-                end_file_year,
-                this_h_tape,
-            )
-            if save_netcdf:
-                _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
-            end = time()
-            if self.verbose:
-                print(f"{msg} took {int(end - start)} s")
+        self._create_cft_ds_file(
+            start_year=start_year,
+            end_year=end_year,
+            n_pfts=n_pfts,
+            this_h_tape=this_h_tape,
+            cfts_to_include=cfts_to_include,
+            crops_to_include=crops_to_include,
+        )
 
         # Open CFT dataset and slice based on years
         if os.path.exists(self.cft_ds_file) and not self.force_no_cft_ds_file:
@@ -269,7 +248,7 @@ class CropCase:
         self.cft_ds["time"] = xr.DataArray(
             data=np.array([t.year - 1 for t in self.cft_ds["time"].values]),
             dims=["time"],
-            attrs={"long_name": "year"}
+            attrs={"long_name": "year"},
         )
 
         # cft_crop is often a groupby() variable, so computing it makes things more efficient.
@@ -289,6 +268,45 @@ class CropCase:
                 rename_dict[v] = v.replace("failed", "unmarketable")
         if rename_dict:
             self.cft_ds = self.cft_ds.rename(rename_dict)
+
+    def _create_cft_ds_file(
+        self, *, start_year, end_year, n_pfts, this_h_tape, cfts_to_include, crops_to_include
+    ):
+        if (
+            self.force_new_cft_ds_file
+            or self.force_no_cft_ds_file
+            or not os.path.exists(self.cft_ds_file)
+        ):
+            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
+            save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
+            if save_netcdf:
+                # If we're generating cft_ds.nc, we'll read all years
+                start_file_year = None
+                end_file_year = None
+            else:
+                if not user_has_write_perms and not self.force_no_cft_ds_file:
+                    print(
+                        f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved"
+                    )
+                start_file_year = start_year
+                end_file_year = end_year
+            msg = f"Making {CFT_DS_FILENAME}"
+            if save_netcdf:
+                msg = msg.replace("Making", "Making and saving")
+            start = time()
+            self.cft_ds = self._read_and_process_files(
+                cfts_to_include,
+                crops_to_include,
+                n_pfts,
+                start_file_year,
+                end_file_year,
+                this_h_tape,
+            )
+            if save_netcdf:
+                _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
+            end = time()
+            if self.verbose:
+                print(f"{msg} took {int(end - start)} s")
 
     def _get_cft_ds_filepath(self):
         if self.cft_ds_dir is None:
