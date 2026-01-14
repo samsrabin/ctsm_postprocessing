@@ -505,17 +505,15 @@ class CropCase:
         if self.verbose:
             start = time()
             print("Getting secondary variables")
-        for var in ["HDATES", "SDATES_PERHARV"]:
-            if var not in cft_ds:
-                print(f"{var} not found in Dataset")
-                continue
-            cft_ds[var] = cft_ds[var].where(cft_ds[var] >= 0)
-        cft_ds["HUIFRAC_PERHARV"] = c2o.get_huifrac(cft_ds)
-        gslen_perharv = c2o.get_gslen(cft_ds)
-        if gslen_perharv is None:
-            print("Could not calculate GSLEN_PERHARV")
-        else:
-            cft_ds["GSLEN_PERHARV"] = gslen_perharv
+
+        # Mask sowing and harvest dates
+        cft_ds = c2o.mask_sow_harv_dates(cft_ds)
+
+        # Get fractional maturity at harvest
+        cft_ds = c2o.get_huifrac(cft_ds)
+
+        # Get growing season length
+        cft_ds = c2o.get_gslen(cft_ds)
 
         # Get more stuff
         cft_ds = extra_area_prod_yield_etc(self.crops_to_include, self, cft_ds)

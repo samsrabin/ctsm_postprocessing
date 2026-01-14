@@ -118,8 +118,8 @@ def test_get_huifrac(hui_gddharv):
         }
     )
 
-    da_out = c2o.get_huifrac(ds)
-    assert da_out.equals(target_da)
+    ds = c2o.get_huifrac(ds)
+    assert ds["HUIFRAC_PERHARV"].equals(target_da)
 
 
 def test_get_huifrac_customnames():
@@ -149,8 +149,8 @@ def test_get_huifrac_customnames():
         }
     )
 
-    da_out = c2o.get_huifrac(ds, var_dict=var_dict)
-    assert da_out.equals(target_da)
+    ds = c2o.get_huifrac(ds, var_dict=var_dict)
+    assert ds["HUIFRAC_PERHARV"].equals(target_da)
 
 
 def test_get_huifrac_preserves_metadata():
@@ -192,8 +192,8 @@ def test_get_huifrac_preserves_metadata():
         }
     )
 
-    da_out = c2o.get_huifrac(ds)
-    assert da_out.equals(target_da)
+    ds = c2o.get_huifrac(ds)
+    assert ds["HUIFRAC_PERHARV"].equals(target_da)
 
 
 @pytest.mark.parametrize(
@@ -246,8 +246,8 @@ def test_get_gslen_within1year(sdate_hdate_pair):
     )
     target_da = xr.DataArray(data=np.array([target]))
 
-    da_out = c2o.get_gslen(ds)
-    assert da_out.equals(target_da)
+    ds = c2o.get_gslen(ds)
+    assert ds["GSLEN_PERHARV"].equals(target_da)
 
 
 @st.composite
@@ -278,8 +278,8 @@ def test_get_gslen_differentyears(sdate_hdate_pair):
     )
     target_da = xr.DataArray(data=np.array([target]))
 
-    da_out = c2o.get_gslen(ds)
-    assert da_out.equals(target_da)
+    ds = c2o.get_gslen(ds)
+    assert ds["GSLEN_PERHARV"].equals(target_da)
 
 
 def test_get_gslen_neg_hdates():
@@ -501,5 +501,5 @@ def test_get_gslen_preserves_metadata():
         }
     )
 
-    da_out = c2o.get_gslen(ds)
-    assert da_out.equals(target_da)
+    ds = c2o.get_gslen(ds)
+    assert ds["GSLEN_PERHARV"].equals(target_da)

@@ -51,7 +51,9 @@ def get_huifrac(ds, var_dict=DEFAULT_VAR_DICT):
     da_huifrac.data = huifrac
 
     da_huifrac.attrs["units"] = "Fraction of required"
-    return da_huifrac
+
+    ds["HUIFRAC_PERHARV"] = da_huifrac
+    return ds
 
 
 def _calendar_has_leapdays(time_da):
@@ -82,7 +84,7 @@ def get_gslen(ds):
     var_hdates = "HDATES"
     var_sdates = "SDATES_PERHARV"
     if not var_hdates in ds and var_sdates in ds:
-        return None
+        return ds
 
     da_hdates = ds[var_hdates]
     da_sdates = ds[var_sdates]
@@ -114,4 +116,14 @@ def get_gslen(ds):
     da_gslen = (da_hdates - da_sdates) % 365
 
     da_gslen.attrs["units"] = "days"
-    return da_gslen
+
+    ds["GSLEN_PERHARV"] = da_gslen
+    return ds
+
+def mask_sow_harv_dates(cft_ds):
+    for var in ["HDATES", "SDATES_PERHARV"]:
+        if var not in cft_ds:
+            print(f"{var} not found in Dataset")
+            continue
+        cft_ds[var] = cft_ds[var].where(cft_ds[var] >= 0)
+    return cft_ds
