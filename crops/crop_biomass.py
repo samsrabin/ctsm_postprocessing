@@ -341,6 +341,15 @@ def get_crop_biomass_vars(cft_ds, case_name):
         )
         cft_ds[var_crop].attrs["units"] = cft_ds[var].attrs["units"]
 
+    # Sense check
+    for trans in PHASE_TRANSITIONS:
+        for c in ["cft", "crop"]:
+            grainc_var = f"grainc_at_{trans.lower()}_{c}"
+            agc_var = f"abovegroundc_at_{trans.lower()}_{c}"
+            if all(v in cft_ds for v in [grainc_var, agc_var]):
+                msg = f"{c}-level grain C > aboveground C at {trans}"
+                assert not (cft_ds[grainc_var] > cft_ds[agc_var]).any(), msg
+
     return case
 
 
