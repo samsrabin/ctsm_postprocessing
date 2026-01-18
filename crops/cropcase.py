@@ -217,9 +217,6 @@ class CropCase:
             end_year=end_year,
         )
 
-        # Misc. things to do after opening CFT dataset
-        self._finish_cft_ds()
-
         # Save, if doing so
         if self.save_netcdf:
             _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
@@ -227,11 +224,14 @@ class CropCase:
         # Open CFT dataset and slice based on years
         self._open_cft_ds_file(start_year, end_year)
 
+        # Misc. things to do after opening CFT dataset
+        self._finish_cft_ds()
+
     def _finish_cft_ds(self):
-        # Get derived variables
+
+        # Get CFT and crop lists, if needed
         if self.cft_list is None:
             self._get_cft_and_crop_lists(self.n_pfts, self.cft_ds)
-        self.cft_ds = self._get_derived_variables(self.cft_ds)
 
         # cft_crop is often a groupby() variable, so computing it makes things more efficient.
         # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
@@ -308,6 +308,9 @@ class CropCase:
         )
         end = time()
 
+        # Get derived variables
+        self.cft_ds = self._get_derived_variables(self.cft_ds)
+
         # Print message
         if self.verbose:
             print(f"Making cft_ds took {int(end - start)} s")
@@ -350,7 +353,7 @@ class CropCase:
                 user_has_write_perms = False
         else:
             user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-        self.save_netcdf = user_has_write_perms and not self.force_no_cft_ds_file
+        self.save_netcdf = self.read_history_files and user_has_write_perms and not self.force_no_cft_ds_file
         if not any([self.save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
             print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
 
