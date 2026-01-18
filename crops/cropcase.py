@@ -443,7 +443,7 @@ class CropCase:
 
         # Get list of files to actually include
         for filename in file_list:
-            ds = xr.open_dataset(filename)
+            ds = xr.open_dataset(filename, decode_timedelta=False)
 
             # A variable saved at the end of the last timestep of a year (and therefore containing
             # data for that year) gets a timestamp with the NEXT year, but we want the user to give

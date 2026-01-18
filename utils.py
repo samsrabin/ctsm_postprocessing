@@ -585,7 +585,7 @@ def mfdataset_preproc(ds, vars_to_import, vegtypes_to_import, timeSlice):
         ds = safer_timeslice(ds, timeSlice)
 
     # Finish import
-    ds = xr.decode_cf(ds, decode_times=True)
+    ds = xr.decode_cf(ds, decode_times=True, decode_timedelta=False)
 
     # Compute derived variables
     for v in derived_vars:
@@ -643,7 +643,7 @@ def import_ds(
     if timeSlice:
         new_filelist = []
         for file in sorted(filelist):
-            filetime = xr.open_dataset(file).time
+            filetime = xr.open_dataset(file, decode_timedelta=False).time
             filetime_sel = safer_timeslice(filetime, timeSlice)
             include_this_file = filetime_sel.size
             if include_this_file:

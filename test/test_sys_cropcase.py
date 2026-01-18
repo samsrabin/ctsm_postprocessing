@@ -171,7 +171,7 @@ def test_setup_cropcase(cropcase):
     check_crujra_matreqs_case_shared(this_case)
 
     # Ensure that saved file has all 5 years even though we only asked for 3
-    ds = xr.open_dataset(this_case.cft_ds_file)
+    ds = xr.open_dataset(this_case.cft_ds_file, decode_timedelta=False)
     assert END_YEAR - START_YEAR + 1 < 5
     assert ds.sizes["time"] == 5
 
