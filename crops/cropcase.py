@@ -520,7 +520,7 @@ class CropCase:
 
         # Get more stuff
         cft_ds = extra_area_prod_yield_etc(self.crops_to_include, self, cft_ds)
-        cft_ds = get_crop_biomass_vars(cft_ds, self.name)
+        cft_ds = get_crop_biomass_vars(cft_ds)
 
         if self.verbose:
             end = time()
