@@ -36,6 +36,19 @@ FIRST_AVAILABLE_YEAR = 1986
 LAST_AVAILABLE_YEAR = 1990
 
 
+def import_default_cropcase(cft_ds_dir):
+    """
+    Function to import our default CropCase
+    """
+    return CropCase(
+        name=CASE_NAME,
+        file_dir=FILE_DIR,
+        start_year=START_YEAR,
+        end_year=END_YEAR,
+        cft_ds_dir=cft_ds_dir,
+    )
+
+
 @pytest.fixture(scope="session")
 def cropcase_base(tmp_path_factory):
     """
@@ -43,13 +56,7 @@ def cropcase_base(tmp_path_factory):
     This is created only once per test session to speed up testing.
     """
     temp_dir = str(tmp_path_factory.mktemp("cropcase_data"))
-    return CropCase(
-        name=CASE_NAME,
-        file_dir=FILE_DIR,
-        start_year=START_YEAR,
-        end_year=END_YEAR,
-        cft_ds_dir=temp_dir,
-    )
+    return import_default_cropcase(temp_dir)
 
 
 @pytest.fixture
