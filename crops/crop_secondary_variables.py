@@ -19,6 +19,7 @@ def _handle_huifrac_where_gddharv_notpos(da_huifrac, da_gddharv):
     # Error if any GDDHARV value is negative for non-NaN HUIFRAC
     if np.any((da_gddharv < 0) & ~np.isnan(da_huifrac)):
         raise NotImplementedError("How should negative GDDHARV affect HUIFRAC?")
+    # TODO: Should there be an error for vice versa?
 
     huifrac = da_huifrac.values
 
@@ -50,7 +51,9 @@ def get_huifrac(ds, var_dict=DEFAULT_VAR_DICT):
     da_huifrac.data = huifrac
 
     da_huifrac.attrs["units"] = "Fraction of required"
-    return da_huifrac
+
+    ds["HUIFRAC_PERHARV"] = da_huifrac
+    return ds
 
 
 def _calendar_has_leapdays(time_da):
@@ -80,6 +83,9 @@ def get_gslen(ds):
     """
     var_hdates = "HDATES"
     var_sdates = "SDATES_PERHARV"
+    if not var_hdates in ds and var_sdates in ds:
+        return ds
+
     da_hdates = ds[var_hdates]
     da_sdates = ds[var_sdates]
 
@@ -107,12 +113,17 @@ def get_gslen(ds):
     if np.any(da_sdates == 366):
         raise NotImplementedError(f"Unexpected {var_sdates} value(s) == 366 suggesting leap days")
 
-    da_gslen = da_hdates - da_sdates
-
-    # Handle seasons that crossed over Jan. 1
-    tmp = da_gslen.values
-    tmp[tmp < 0] = 365 + tmp[tmp < 0]
-    da_gslen.values = tmp
+    da_gslen = (da_hdates - da_sdates) % 365
 
     da_gslen.attrs["units"] = "days"
-    return da_gslen
+
+    ds["GSLEN_PERHARV"] = da_gslen
+    return ds
+
+def mask_sow_harv_dates(cft_ds):
+    for var in ["HDATES", "SDATES_PERHARV"]:
+        if var not in cft_ds:
+            print(f"{var} not found in Dataset")
+            continue
+        cft_ds[var] = cft_ds[var].where(cft_ds[var] >= 0)
+    return cft_ds

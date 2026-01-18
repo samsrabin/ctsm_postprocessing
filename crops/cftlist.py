@@ -8,15 +8,18 @@ accessing and managing CFTs.
 
 import os
 import sys
-import numpy as np
 
 try:
     # Attempt relative import if running as part of a package
     from .cft import Cft
+    # TODO: Future-proof default: Determine from ds upon initialization.
+    from .crop_defaults import DEFAULT_CFTS_TO_INCLUDE
 except ImportError:
     # Fallback to absolute import if running as a script
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from crops.cft import Cft
+    # TODO: Future-proof default: Determine from ds upon initialization.
+    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE
 
 
 class CftList:
@@ -28,14 +31,13 @@ class CftList:
         cft_list (list): List of Cft objects.
     """
 
-    def __init__(self, ds, n_pfts, cfts_to_include):
+    def __init__(self, ds, n_pfts, cfts_to_include=DEFAULT_CFTS_TO_INCLUDE):
         """
         Initialize a CftList instance.
 
         Parameters:
             ds (xarray.Dataset): Dataset containing crop data.
             n_pfts (int): Number of PFTs.
-            cfts_to_include (list): List of CFTs to include in the list.
         """
         # Get list of all possible CFTs
         self.cft_list = []
@@ -45,11 +47,11 @@ class CftList:
             cft_name = key[4:]
             self.cft_list.append(Cft(cft_name, value))
 
-        # Ensure that all CFTs in cfts_to_include are present
+        # Ensure that all included CFTs are present
         cfts_in_file = [x.name for x in self.cft_list]
         missing_cfts = [x for x in cfts_to_include if x not in cfts_in_file]
         if missing_cfts:
-            msg = "The following are in cfts_to_include but not the dataset: " + ", ".join(
+            msg = "Trying to include these CFTs that aren't in the dataset: " + ", ".join(
                 missing_cfts
             )
             raise KeyError(msg)
@@ -61,7 +63,7 @@ class CftList:
             cft = cft.update_pft(n_non_crop_pfts)
 
         # Only include CFTs we care about
-        if len(cfts_to_include) != len(np.unique(cfts_to_include)):
+        if len(cfts_to_include) != len(set(cfts_to_include)):
             raise ValueError("Duplicate CFT(s) in cfts_to_include")
         self.cft_list = [x for x in self.cft_list if x.name in cfts_to_include]
 
@@ -70,6 +72,13 @@ class CftList:
             cft.get_where(ds)
             if len(cft.where) == 0:
                 print("Warning: No occurrences found of " + cft.name)
+
+    def __eq__(self, other):
+        # Check that they're both CftLists
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+        result = self.cft_list == other.cft_list
+        return result
 
     def __getitem__(self, index):
         return self.cft_list[index]

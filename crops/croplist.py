@@ -41,6 +41,13 @@ class CropList:
         if not self.crop_list:
             raise RuntimeError("No crops_to_include found in cft_list")
 
+    def __eq__(self, other):
+        # Check that they're both CropLists
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
+        result = self.crop_list == other.crop_list
+        return result
+
     def __getitem__(self, index):
         if isinstance(index, str):
             found = False

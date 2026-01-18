@@ -8,15 +8,10 @@ import unittest
 import numpy as np
 import xarray as xr
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crops import mark_crops_invalid as mci
-except ImportError:
-    # Fallback to absolute import if running as a script
-    x = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    print(x)
-    sys.path.append(x)
-    from crops import mark_crops_invalid as mci
+# pylint: disable=wrong-import-position
+x = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(x)
+from crops import mark_crops_invalid as mci
 
 # pylint: disable=protected-access
 # pylint: disable=too-many-public-methods
@@ -175,6 +170,42 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         Test that _get_isimip3_min_hui() works as expected when pft is on last dimension
         """
         ds, target = self.setup_minviablehui_ds_pftlast()
+
+        result = mci._get_isimip3_min_hui(ds, self.huifrac_var)
+        self.assertTrue(np.array_equal(result, target))
+
+    def test_get_isimip3_min_hui_cftlast(self):
+        """
+        Test that _get_isimip3_min_hui() works as expected when cft is on last dimension
+        (i.e., CFT-ized dataset)
+        """
+        n_cft = 4
+        n_time = 2
+        shape = (n_time, n_cft)
+        huifrac_in = np.array([[0.1, 0.9, 0.2, 0.8], [0.3, 0.7, 0.4, 0.6]])
+        huifrac_coords = {
+            "time": np.arange(n_time),
+            "cft": [17, 19, 20, 21],  # For test, only the first one should be a corn PFT
+        }
+        huifrac_in_da = xr.DataArray(
+            data=huifrac_in,
+            dims=["time", "cft"],
+            coords=huifrac_coords,
+            attrs={"test_attribute": 15},
+        )
+        ds = xr.Dataset(
+            data_vars={
+                self.huifrac_var: huifrac_in_da,
+            }
+        )
+
+        # Check that you've set things up right
+        self.assertTupleEqual(huifrac_in.shape, shape)
+        self.assertTrue("cft" in ds.dims)
+        self.assertTrue("time" in ds.dims)
+
+        # Expect 0.8 where corn, 0.9 elsewhere
+        target = np.array([[0.8, 0.9, 0.9, 0.9], [0.8, 0.9, 0.9, 0.9]])
 
         result = mci._get_isimip3_min_hui(ds, self.huifrac_var)
         self.assertTrue(np.array_equal(result, target))
@@ -452,9 +483,9 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         self.assertNotIn("min_viable_hui", da_out.attrs)
         self.assertTrue(da_out.attrs["mxmat_limited"])
 
-    def test_mark_crops_invalid_just_seasonlength_corn(self):
+    def setup_time_grid_ds(self):
         """
-        Test mark_crops_invalid() when not setting minimum viable HUI, corn only
+        Set up a fake Dataset with dimensions time x grid
         """
         n_grid = 4
         n_time = 2
@@ -474,6 +505,14 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
                 self.huifrac_var: huifrac_in_da,
             }
         )
+
+        return ds
+
+    def test_mark_crops_invalid_just_seasonlength_corn(self):
+        """
+        Test mark_crops_invalid() when not setting minimum viable HUI, corn only
+        """
+        ds = self.setup_time_grid_ds()
 
         da_in = xr.DataArray(
             data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
@@ -495,7 +534,15 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
             ds, "test_var", min_viable_hui=None, mxmats=mxmats, this_pft="corn"
         )
         target = np.array([[1, 2, 3, 0], [0, 0, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertNotIn("min_viable_hui", da_out.attrs)
+        self.assertTrue(da_out.attrs["mxmat_limited"])
 
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(
+            ds, min_viable_hui=None, mxmats=mxmats, this_pft="corn"
+        )
+        target = np.array([[1, 1, 1, 0], [0, 0, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertNotIn("min_viable_hui", da_out.attrs)
         self.assertTrue(da_out.attrs["mxmat_limited"])
@@ -518,6 +565,13 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
 
         da_out = mci.mark_crops_invalid(ds, "test_var", min_viable_hui=min_viable_hui, mxmats=None)
         target = np.array([[0, 2, 0, 4], [0, 6, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
+        self.assertNotIn("mxmat_limited", da_out.attrs)
+
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(ds, min_viable_hui=min_viable_hui, mxmats=None)
+        target = np.array([[0, 1, 0, 1], [0, 1, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
         self.assertNotIn("mxmat_limited", da_out.attrs)
@@ -550,24 +604,7 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
         Test mark_crops_invalid() when not setting max season length and saying
         min_viable_hui="isimip3", corn only
         """
-        n_grid = 4
-        n_time = 2
-        huifrac_in = np.array([[0.1, 0.9, 0.2, 0.8], [0.3, 0.7, 0.4, 0.6]])
-        huifrac_coords = {
-            "time": np.arange(n_time),
-            "grid": np.arange(n_grid),
-        }
-        huifrac_in_da = xr.DataArray(
-            data=huifrac_in,
-            dims=["time", "grid"],
-            coords=huifrac_coords,
-            attrs={"test_attribute": 15},
-        )
-        ds = xr.Dataset(
-            data_vars={
-                self.huifrac_var: huifrac_in_da,
-            }
-        )
+        ds = self.setup_time_grid_ds()
 
         da_in = xr.DataArray(
             data=np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
@@ -616,7 +653,15 @@ class TestUnitMarkCropsInvalid(unittest.TestCase):
             ds, "test_var", min_viable_hui=min_viable_hui, mxmats=mxmats
         )
         target = np.array([[0, 2, 0, 0], [0, 6, 0, 0]])
+        self.assertTrue(np.array_equal(da_out.values, target))
+        self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
+        self.assertTrue(da_out.attrs["mxmat_limited"])
 
+        # Test again, just getting the mask
+        da_out = mci.mark_crops_invalid(
+            ds, min_viable_hui=min_viable_hui, mxmats=mxmats
+        )
+        target = np.array([[0, 1, 0, 0], [0, 1, 0, 0]])
         self.assertTrue(np.array_equal(da_out.values, target))
         self.assertEqual(da_out.attrs["min_viable_hui"], min_viable_hui)
         self.assertTrue(da_out.attrs["mxmat_limited"])

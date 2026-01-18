@@ -8,6 +8,8 @@ import os
 import numpy as np
 import xarray as xr
 
+NEED_LON_0_360_MSG = "trim_latlon can only handle longitudes [0, 360)"
+
 
 def parse_arguments():
     """
@@ -17,7 +19,7 @@ def parse_arguments():
     parser.add_argument("filename_in", type=str, help="Input filename")
     parser.add_argument("--radius", type=float, default=5, help="'Radius' of the box in degrees")
     parser.add_argument(
-        "--center", type=float, nargs=2, default=[39, -95], help="Center of the box (lat, lon)"
+        "--center", type=float, nargs=2, default=[39, 265], help="Center of the box (lat, lon)"
     )
     parser.add_argument("--filename-out", type=str, help="Output filename")
     parser.add_argument(
@@ -25,13 +27,6 @@ def parse_arguments():
     )
     args = parser.parse_args()
     return args
-
-
-def convert_lon(data):
-    """
-    Convert longitude from [0, 360) to [-180, 180)
-    """
-    return np.mod((data + 180), 360) - 180
 
 
 def main():
@@ -47,6 +42,14 @@ def main():
     bnds_lat = center[0] + radius * np.array([-1, 1])
     bnds_lon = center[1] + radius * np.array([-1, 1])
 
+    # Check that boundary longitudes are in [0, 360) format
+    lon_min = np.min(bnds_lon)
+    lon_max = np.max(bnds_lon)
+    if lon_min < 0:
+        raise NotImplementedError(f"Center lon - radius is {lon_min} < 0; {NEED_LON_0_360_MSG}")
+    if lon_max >= 360:
+        raise NotImplementedError(f"Center lon + radius is {lon_max} >= 360; {NEED_LON_0_360_MSG}")
+
     if not filename_out:
         filename_out = os.path.splitext(filename_in)[0] + "_trimmed.nc"
     if not overwrite and os.path.exists(filename_out):
@@ -54,8 +57,15 @@ def main():
         sys.exit(1)
 
     # Import
-    ds = xr.open_dataset(filename_in)
-    ds = ds.assign_coords({"lon": convert_lon(ds["lon"].values)})
+    ds = xr.open_dataset(filename_in, decode_timedelta=False)
+
+    # Check that dataset longitudes are in [0, 360) format
+    lon_min = np.min(ds["lon"].values)
+    lon_max = np.max(ds["lon"].values)
+    if lon_min < 0:
+        raise NotImplementedError(f"Min dataset longitude {lon_min} < 0; {NEED_LON_0_360_MSG}")
+    if lon_max >= 360:
+        raise NotImplementedError(f"Max dataset longitude {lon_max} >= 360; {NEED_LON_0_360_MSG}")
 
     selection_dict = {}
     index1d_dict = {}
@@ -76,7 +86,6 @@ def main():
         for var in ds:
             if var.endswith("_lon") and (dim,) == ds[var].dims:
                 da_lon = ds[var]
-                da_lon = convert_lon(da_lon)
                 da_lat = ds[var.replace("_lon", "_lat")]
                 index1d_dict[dim] = var
                 break
