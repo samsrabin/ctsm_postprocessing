@@ -7,7 +7,9 @@ Module to system-test cropcase.py
 
 import sys
 import os
+from shutil import copyfile
 import copy
+from unittest.mock import patch
 import numpy as np
 import xarray as xr
 import pytest
@@ -179,6 +181,41 @@ def test_setup_cropcase(cropcase):
     # ... but not after changing something
     this_case_copy.name = "82nr924nd"
     assert this_case != this_case_copy
+
+
+def test_reimport_cropcase(cropcase):
+    """
+    Make sure that CropCase works when importing a saved cft_ds.nc file
+    """
+
+    # Make sure everything is set up how we expect:
+    # Directory should exist to hold cft_ds.nc
+    cft_ds_dir = cropcase.cft_ds_dir
+    assert os.path.exists(cft_ds_dir) and os.path.isdir(cft_ds_dir)
+    # cft_ds.nc should be in that directory
+    cft_ds_file = cropcase.cft_ds_file
+    assert os.path.dirname(cft_ds_file) == cft_ds_dir
+
+    # Make copy of cft_ds.nc
+    new_subdir = os.path.join(cft_ds_dir, "some_subdir")
+    os.makedirs(new_subdir)
+    new_file = os.path.join(new_subdir, os.path.basename(cft_ds_file))
+    copyfile(cft_ds_file, new_file)
+    assert os.path.exists(new_file)
+
+    # Reimport, making sure we didn't re-save the file
+    with patch("ctsm_postprocessing.crops.cropcase._save_cft_ds_to_netcdf") as mock_save:
+        this_case_2 = import_default_cropcase(new_subdir)
+        # Verify that _save_cft_ds_to_netcdf was not called
+        mock_save.assert_not_called()
+    assert this_case_2.save_netcdf is False
+
+    # Make sure we got CFT and crop lists
+    assert this_case_2.cft_list is not None
+    assert this_case_2.crop_list is not None
+
+    # Perform a bunch of checks
+    check_crujra_matreqs_case_shared(this_case_2)
 
 
 def test_setup_cropcase_noperms(tmp_path):
