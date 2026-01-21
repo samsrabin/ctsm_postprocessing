@@ -15,8 +15,9 @@ class Cft:
 
     Attributes:
         name (str): Name of the CFT.
-        cft_num (int): 1-indexed CFT number in the FORTRAN style.
-        pft_num (int): PFT number, updated after reading all CFTs.
+        cft_num (int): Taken from `cft_temperate_corn` (or whatever) global attribute of CLM history
+                       output. c3_crop=1, c4_crop=2, temperate_corn=3, etc.
+        pft_num (int): PFT number, updated after reading all CFTs. temperate_corn=17, etc.
     """
 
     def __init__(self, name, cft_num):
@@ -25,7 +26,8 @@ class Cft:
 
         Parameters:
             name (str): Name of the CFT.
-            cft_num (int): 1-indexed CFT number in the FORTRAN style.
+            cft_num (int): Taken from `cft_temperate_corn` (or whatever) global attribute of CLM
+                           history output. c3_crop=1, c4_crop=2, temperate_corn=3, etc.
         """
         self.name = name
 
