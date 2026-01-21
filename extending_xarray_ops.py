@@ -2,6 +2,9 @@
 Functions to extend the kinds of operations you can do to an Xarray object
 """
 
+from __future__ import annotations
+
+from typing import Any
 import warnings
 from scipy.stats._axis_nan_policy import SmallSampleWarning
 from scipy.stats import circmean
@@ -11,23 +14,26 @@ import xarray as xr
 DAYS_IN_YEAR = 365
 
 
-def da_circmean(da, dim=None, **kwargs):
+def da_circmean(da: xr.DataArray, dim: str | list[str] | None = None, **kwargs) -> xr.DataArray:
     """
-    Compute circular mean of a DataArray along specified dimension(s)
+    Compute circular mean of a DataArray along specified dimension(s).
+
+    This function wraps scipy.stats.circmean to work with xarray DataArrays, handling
+    multi-dimensional data and preserving attributes.
 
     Parameters
     ----------
-    da : xr.DataArray
-        Input DataArray
-    dim : str, list of str, or None, optional
+    da : xarray.DataArray
+        Input DataArray.
+    dim : str | list[str] | None, optional
         Dimension(s) to compute circular mean over. If None, compute over all dimensions.
     **kwargs
-        Additional keyword arguments passed to scipy.stats.circmean (e.g., high, low, nan_policy)
+        Additional keyword arguments passed to scipy.stats.circmean (e.g., high, low, nan_policy).
 
     Returns
     -------
-    xr.DataArray
-        DataArray with circular mean computed along specified dimension(s)
+    xarray.DataArray
+        DataArray with circular mean computed along specified dimension(s).
     """
 
     # Override default circmean nan_policy of "propagate" with the behavior from xarray's mean:
@@ -47,7 +53,7 @@ def da_circmean(da, dim=None, **kwargs):
     num_core_dims = len(input_core_dims[0]) if input_core_dims[0] else 0
 
     # Create a wrapper function that passes the appropriate axis to circmean
-    def _circmean_wrapper(data, **kw):
+    def _circmean_wrapper(data: np.ndarray, **kw: Any) -> np.ndarray:
         if reduce_all_dims:
             return circmean(data, axis=None, **kw)
 
@@ -77,11 +83,28 @@ def da_circmean(da, dim=None, **kwargs):
     return result
 
 
-def _round_to_nearest_day(value):
+def _round_to_nearest_day(value: float) -> float:
     """
-    Round a DOY value to the nearest day. The philosophy here is that 1 represents noon on Jan. 1,
-    2 represents noon on Jan. 2, ..., and 365 represents noon on Dec. 31. Thus,
-    365.5 == 0.5 == midnight on Jan. 1, so either of those inputs should return 1 (Jan. 1).
+    Round a DOY value to the nearest day.
+
+    The philosophy here is that 1 represents noon on Jan. 1, 2 represents noon on Jan. 2, ...,
+    and 365 represents noon on Dec. 31. Thus, 365.5 == 0.5 == midnight on Jan. 1, so either of
+    those inputs should return 1 (Jan. 1).
+
+    Parameters
+    ----------
+    value : float
+        Day-of-year value to round.
+
+    Returns
+    -------
+    float
+        Rounded day-of-year value in the range [1, 365].
+
+    Raises
+    ------
+    ValueError
+        If value is negative.
     """
 
     # Just because this is weird to think about
@@ -91,14 +114,41 @@ def _round_to_nearest_day(value):
     if 0 <= value < 0.5 or -0.5 <= value - DAYS_IN_YEAR < 0.5:
         return DAYS_IN_YEAR
 
-    # We want to always round X.5 to X+1. Unfortunately round() and np.round() use "banker’s
+    # We want to always round X.5 to X+1. Unfortunately round() and np.round() use "banker's
     # rounding," meaning that they round X.5 to the nearest even integer.
     return np.mod(np.floor(value + 0.5), DAYS_IN_YEAR)
 
 
-def da_circmean_doy(da, dim=None, **kwargs):
+def da_circmean_doy(
+    da: xr.DataArray, dim: str | list[str] | None = None, **kwargs
+) -> xr.DataArray:
     """
-    Like da_circmean, but wrapped to work with integer day-of-year outputs in the range [1, 365].
+    Compute circular mean for integer day-of-year values in the range [1, 365].
+
+    Like da_circmean, but wrapped to work with integer day-of-year outputs. This function
+    hard-codes the circular range to [1, 366) and rounds results to the nearest day.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        Input DataArray with day-of-year values (integers in range [1, 365] or -1 for no data).
+    dim : str | list[str] | None, optional
+        Dimension(s) to compute circular mean over. If None, compute over all dimensions.
+    **kwargs
+        Additional keyword arguments passed to da_circmean (except 'low' and 'high' which are
+        hard-coded).
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray with circular mean computed and rounded to nearest day.
+
+    Raises
+    ------
+    TypeError
+        If 'low' or 'high' are specified in kwargs (these are hard-coded for this function).
+    AssertionError
+        If input values are not whole numbers or not in the range [1, 365].
     """
 
     # We hard-code the circular range for this function
