@@ -171,7 +171,7 @@ def test_setup_cropcase(cropcase):
     check_crujra_matreqs_case_shared(this_case)
 
     # Ensure that saved file has all 5 years even though we only asked for 3
-    ds = xr.open_dataset(this_case.cft_ds_file, decode_timedelta=False)
+    ds = xr.open_dataset(this_case._cft_ds_file, decode_timedelta=False)
     assert END_YEAR - START_YEAR + 1 < 5
     assert ds.sizes["time"] == 5
 
@@ -190,10 +190,10 @@ def test_reimport_cropcase(cropcase):
 
     # Make sure everything is set up how we expect:
     # Directory should exist to hold cft_ds.nc
-    cft_ds_dir = cropcase.cft_ds_dir
+    cft_ds_dir = cropcase._cft_ds_dir
     assert os.path.exists(cft_ds_dir) and os.path.isdir(cft_ds_dir)
     # cft_ds.nc should be in that directory
-    cft_ds_file = cropcase.cft_ds_file
+    cft_ds_file = cropcase._cft_ds_file
     assert os.path.dirname(cft_ds_file) == cft_ds_dir
 
     # Make copy of cft_ds.nc
@@ -208,10 +208,10 @@ def test_reimport_cropcase(cropcase):
         this_case_2 = import_default_cropcase(new_subdir)
         # Verify that _save_cft_ds_to_netcdf was not called
         mock_save.assert_not_called()
-    assert this_case_2.save_netcdf is False
+    assert this_case_2._save_netcdf is False
 
     # Make sure we got CFT and crop lists
-    assert this_case_2.cft_list is not None
+    assert this_case_2._cft_list is not None
     assert this_case_2.crop_list is not None
 
     # Perform a bunch of checks

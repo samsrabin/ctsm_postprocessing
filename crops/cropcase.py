@@ -185,27 +185,31 @@ class CropCase:
             force_no_cft_ds_file (bool): Don't try to read or save cft_ds file.
             cft_ds_dir (str): Where to save the cft_ds file. Default same as file_dir.
         """
-        self.verbose = verbose
+        self._verbose = verbose
         self.name = name
-        self.cft_ds_dir = cft_ds_dir
-        self.file_dir = file_dir
-        self.cft_ds_file = None
-        self.cft_ds_file_scratch = None
-        self.file_list = []
-        self.cft_list = None
+        self._cft_ds_dir = cft_ds_dir
+        self._file_dir = file_dir
+        self._cft_ds_file = None
+        self._cft_ds_file_scratch = None
+        self._file_list = []
+        self._cft_list = None
         self.crop_list = None
-        self.force_new_cft_ds_file = force_new_cft_ds_file
-        self.force_no_cft_ds_file = force_no_cft_ds_file
-        self.n_pfts = n_pfts
-        self.this_h_tape = this_h_tape
-        self.cfts_to_include = cfts_to_include
-        self.crops_to_include = crops_to_include
+        self._force_new_cft_ds_file = force_new_cft_ds_file
+        self._force_no_cft_ds_file = force_no_cft_ds_file
+        self._n_pfts = n_pfts
+        self._this_h_tape = this_h_tape
+        self._cfts_to_include = cfts_to_include
+        self._crops_to_include = crops_to_include
+
+        # Set later
+        self.cft_ds = None
+        self._save_netcdf = None
 
         # Check incompatible options
-        if self.force_new_cft_ds_file and self.force_no_cft_ds_file:
+        if self._force_new_cft_ds_file and self._force_no_cft_ds_file:
             raise ValueError("force_new_cft_ds_file and force_no_cft_ds_file can't both be True")
-        for cft in self.cfts_to_include:
-            if not any(crop in cft for crop in self.crops_to_include):
+        for cft in self._cfts_to_include:
+            if not any(crop in cft for crop in self._crops_to_include):
                 raise KeyError(f"Which crop should {cft} be associated with?")
 
         # Get path to save cft_ds.nc
@@ -218,8 +222,8 @@ class CropCase:
         )
 
         # Save, if doing so
-        if self.save_netcdf:
-            _save_cft_ds_to_netcdf(self.cft_ds, self.cft_ds_file, self.verbose)
+        if self._save_netcdf:
+            _save_cft_ds_to_netcdf(self.cft_ds, self._cft_ds_file, self._verbose)
 
         # Open CFT dataset and slice based on years
         self._open_cft_ds_file(start_year, end_year)
@@ -230,8 +234,8 @@ class CropCase:
     def _finish_cft_ds(self):
 
         # Get CFT and crop lists, if needed
-        if self.cft_list is None:
-            self._get_cft_and_crop_lists(self.n_pfts, self.cft_ds)
+        if self._cft_list is None:
+            self._get_cft_and_crop_lists(self._n_pfts, self.cft_ds)
 
         # cft_crop is often a groupby() variable, so computing it makes things more efficient.
         # Avoids DeprecationWarning that will become an error in xarray v2025.05.0+
@@ -252,12 +256,12 @@ class CropCase:
             self.cft_ds = self.cft_ds.rename(rename_dict)
 
     def _open_cft_ds_file(self, start_year, end_year):
-        if os.path.exists(self.cft_ds_file) and not self.force_no_cft_ds_file:
+        if os.path.exists(self._cft_ds_file) and not self._force_no_cft_ds_file:
             # Always prefer to read from the file, to ensure consistency of performance
             self.cft_ds = None
             start = time()
             self.cft_ds = xr.open_dataset(
-                self.cft_ds_file,
+                self._cft_ds_file,
                 decode_timedelta=False,
                 chunks=CFT_DS_CHUNKING,
                 chunked_array_type="dask",
@@ -291,7 +295,7 @@ class CropCase:
         if not self.read_history_files:
             return
 
-        if self.save_netcdf:
+        if self._save_netcdf:
             # If we're generating cft_ds.nc, we'll read all years
             start_file_year = None
             end_file_year = None
@@ -302,7 +306,7 @@ class CropCase:
         # Read files and create cft_ds
         start = time()
         self.cft_ds = self._read_and_process_files(
-            self.n_pfts,
+            self._n_pfts,
             start_file_year,
             end_file_year,
         )
@@ -312,50 +316,50 @@ class CropCase:
         self.cft_ds = self._get_derived_variables(self.cft_ds)
 
         # Print message
-        if self.verbose:
+        if self._verbose:
             print(f"Making cft_ds took {int(end - start)} s")
 
     def _get_cft_ds_file_scratch(self):
         scratch_dir = os.environ["SCRATCH"]
         if not scratch_dir:
             return
-        self.cft_ds_file_scratch = os.path.join(
+        self._cft_ds_file_scratch = os.path.join(
             scratch_dir, "clm_crop_case_cft_ds_files", self.name, CFT_DS_FILENAME
         )
 
     def _get_cft_ds_filepath(self):
         # Get path
-        if self.cft_ds_dir is None:
-            self.cft_ds_dir = self.file_dir
-        self.cft_ds_file = os.path.join(self.cft_ds_dir, CFT_DS_FILENAME)
+        if self._cft_ds_dir is None:
+            self._cft_ds_dir = self._file_dir
+        self._cft_ds_file = os.path.join(self._cft_ds_dir, CFT_DS_FILENAME)
 
         # If cft_ds file not found, see if it can be found in the scratch location
-        if not os.path.exists(self.cft_ds_file):
+        if not os.path.exists(self._cft_ds_file):
             self._get_cft_ds_file_scratch()
-            if self.cft_ds_file_scratch and os.path.exists(self.cft_ds_file_scratch):
-                self.cft_ds_file = self.cft_ds_file_scratch
-                self.cft_ds_dir = os.path.dirname(self.cft_ds_file)
-                print(f"Reading cft_ds from $SCRATCH: {self.cft_ds_file}")
+            if self._cft_ds_file_scratch and os.path.exists(self._cft_ds_file_scratch):
+                self._cft_ds_file = self._cft_ds_file_scratch
+                self._cft_ds_dir = os.path.dirname(self._cft_ds_file)
+                print(f"Reading cft_ds from $SCRATCH: {self._cft_ds_file}")
 
         # Determine whether to read history files
         self.read_history_files = (
-            self.force_new_cft_ds_file
-            or self.force_no_cft_ds_file
-            or not os.path.exists(self.cft_ds_file)
+            self._force_new_cft_ds_file
+            or self._force_no_cft_ds_file
+            or not os.path.exists(self._cft_ds_file)
         )
 
         # Determine whether to save netCDF
-        if not os.path.exists(self.cft_ds_dir):
+        if not os.path.exists(self._cft_ds_dir):
             try:
-                os.makedirs(self.cft_ds_dir, exist_ok=True)
+                os.makedirs(self._cft_ds_dir, exist_ok=True)
                 user_has_write_perms = True
             except PermissionError:
                 user_has_write_perms = False
         else:
-            user_has_write_perms = os.access(self.cft_ds_dir, os.W_OK)
-        self.save_netcdf = self.read_history_files and user_has_write_perms and not self.force_no_cft_ds_file
-        if not any([self.save_netcdf, user_has_write_perms, self.force_no_cft_ds_file]):
-            print(f"User can't write in {self.cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
+            user_has_write_perms = os.access(self._cft_ds_dir, os.W_OK)
+        self._save_netcdf = self.read_history_files and user_has_write_perms and not self._force_no_cft_ds_file
+        if not any([self._save_netcdf, user_has_write_perms, self._force_no_cft_ds_file]):
+            print(f"User can't write in {self._cft_ds_dir}, so {CFT_DS_FILENAME} won't be saved")
 
     def __eq__(self, other):
         # Check that they're both CropCases
@@ -403,7 +407,7 @@ class CropCase:
         # Adding combine="nested", concat_dim="time" doesn't give time axis to only variables we
         # want
         ds = xr.open_mfdataset(
-            self.file_list,
+            self._file_list,
             decode_times=True,
             chunks={},
             join="override",
@@ -431,11 +435,11 @@ class CropCase:
         Get the files to import
         """
         # Get the tape we need to import (h0i, h2a, etc.)
-        if self.this_h_tape is None:
-            self.this_h_tape = _get_crop_tape(self.file_dir, self.name)
+        if self._this_h_tape is None:
+            self._this_h_tape = _get_crop_tape(self._file_dir, self.name)
         # Get list of all files
         file_pattern = os.path.join(
-            self.file_dir, self.name + ".clm2." + self.this_h_tape + ".*.nc"
+            self._file_dir, self.name + ".clm2." + self._this_h_tape + ".*.nc"
         )
         file_list = np.sort(glob.glob(file_pattern))
         if len(file_list) == 0:
@@ -453,8 +457,8 @@ class CropCase:
             start_year_ok = start_year is None or (start_year + 1) <= ds.time.values[-1].year
             end_year_ok = end_year is None or ds.time.values[0].year <= (end_year + 1)
             if start_year_ok and end_year_ok:
-                self.file_list.append(filename)
-        if not self.file_list:
+                self._file_list.append(filename)
+        if not self._file_list:
             raise FileNotFoundError(f"No files found with timestamps in {start_year}-{end_year}")
 
     def _get_cft_and_crop_lists(self, n_pfts, ds):
@@ -462,16 +466,16 @@ class CropCase:
         Get lists of CFTs and crops included in history
         """
         # Get CFT list
-        self.cft_list = CftList(ds, n_pfts, cfts_to_include=self.cfts_to_include)
+        self._cft_list = CftList(ds, n_pfts, cfts_to_include=self._cfts_to_include)
 
         # Get crop list
-        self.crop_list = CropList(self.crops_to_include, self.cft_list, ds)
+        self.crop_list = CropList(self._crops_to_include, self._cft_list, ds)
 
     def _get_cft_ds(self, ds):
         """
         Postprocess the history dataset into the "CFT dataset"
         """
-        for i, cft in enumerate(self.cft_list):
+        for i, cft in enumerate(self._cft_list):
             this_cft_ds = cu.get_cft_ds(ds, cft)
 
             if i == 0:
@@ -505,7 +509,7 @@ class CropCase:
         return cft_ds
 
     def _get_derived_variables(self, cft_ds):
-        if self.verbose:
+        if self._verbose:
             start = time()
             print("Getting secondary variables")
 
@@ -519,10 +523,10 @@ class CropCase:
         cft_ds = c2o.get_gslen(cft_ds)
 
         # Get more stuff
-        cft_ds = extra_area_prod_yield_etc(self.crops_to_include, self, cft_ds)
+        cft_ds = extra_area_prod_yield_etc(self._crops_to_include, self, cft_ds)
         cft_ds = get_crop_biomass_vars(cft_ds)
 
-        if self.verbose:
+        if self._verbose:
             end = time()
             print(f"Derived variables took {int(end - start)} s")
 
