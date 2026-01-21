@@ -18,7 +18,7 @@ def get_cft_ds(ds, cft):
     Returns:
     xarray.Dataset: Dataset for the specified crop functional type.
     """
-    ds = ds.isel(pft=cft.where)
+    ds = ds.isel(pft=cft.get_where(ds))
     ds["cft"] = cft.pft_num
     ds = ds.set_coords("cft")
     for var in ds:

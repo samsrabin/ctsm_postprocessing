@@ -67,12 +67,6 @@ class CftList:
             raise ValueError("Duplicate CFT(s) in cfts_to_include")
         self.cft_list = [x for x in self.cft_list if x.name in cfts_to_include]
 
-        # Figure out where the pft index is each CFT
-        for cft in self.cft_list:
-            cft.get_where(ds)
-            if len(cft.where) == 0:
-                print("Warning: No occurrences found of " + cft.name)
-
     def __eq__(self, other):
         # Check that they're both CftLists
         if not isinstance(other, self.__class__):
