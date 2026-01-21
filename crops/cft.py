@@ -68,7 +68,6 @@ class Cft:
                 self.name + ":",
                 f"   cft_num: {self.cft_num}",
                 f"   pft_num: {self.pft_num}",
-                f"   pft_ind: {self.pft_ind}",
             ]
         )
 
@@ -78,7 +77,6 @@ class Cft:
         this function gets called once that's done in CftList.__init__().
         """
         self.pft_num = n_non_crop_pfts + self.cft_num - 1
-        self.pft_ind = self.pft_num - 1
 
     def get_where(self, ds):
         """
