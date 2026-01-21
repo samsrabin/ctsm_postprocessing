@@ -469,7 +469,7 @@ class CropCase:
         self._cft_list = CftList(ds, n_pfts, cfts_to_include=self._cfts_to_include)
 
         # Get crop list
-        self.crop_list = CropList(self._crops_to_include, self._cft_list, ds)
+        self.crop_list = CropList(self._crops_to_include, self._cft_list)
 
     def _get_cft_ds(self, ds):
         """

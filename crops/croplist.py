@@ -18,18 +18,17 @@ class CropList:
         crop_list (list): List of Crop objects.
     """
 
-    def __init__(self, crops_to_include, cft_list, ds):
+    def __init__(self, crops_to_include, cft_list):
         """
         Initialize a CropList instance.
 
         Parameters:
             crops_to_include (list): List of crop names to include.
             cft_list (list): List of CFTs to include in the crops.
-            ds (xarray.Dataset): Dataset containing crop data.
         """
         if len(crops_to_include) != len(np.unique(crops_to_include)):
             raise ValueError("Duplicate crop(s) found in crops_to_include")
-        self.crop_list = [Crop(x, cft_list, ds) for x in crops_to_include]
+        self.crop_list = [Crop(x, cft_list) for x in crops_to_include]
         if not self.crop_list:
             raise RuntimeError("No crops_to_include found in cft_list")
 

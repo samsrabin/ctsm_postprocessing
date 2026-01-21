@@ -23,7 +23,7 @@ class Crop:
         pft_nums (list[int]): List of PFT numbers corresponding to the CFTs.
     """
 
-    def __init__(self, name: str, cft_list: list[Cft], ds: xr.Dataset) -> None:  # pylint: disable=unused-argument
+    def __init__(self, name: str, cft_list: list[Cft]) -> None:
         """
         Initialize a Crop instance.
 
@@ -31,8 +31,6 @@ class Crop:
             name (str): Name of the crop.
             cft_list (list[Cft]): List of CFTs to include in this crop. Only CFTs whose names
                                   contain the crop name will be included.
-            ds (xarray.Dataset): Dataset containing crop data. Currently unused but kept for API
-                                 consistency.
         """
         self.name = name
 
