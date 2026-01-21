@@ -2,8 +2,6 @@
 Module to unit-test extending_xarray_ops.py
 """
 
-import sys
-import os
 import unittest
 import warnings
 from scipy.stats._axis_nan_policy import SmallSampleWarning
@@ -11,13 +9,7 @@ from scipy.stats import circmean
 import numpy as np
 import xarray as xr
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..extending_xarray_ops import da_circmean, da_circmean_doy, _round_to_nearest_day
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from extending_xarray_ops import da_circmean, da_circmean_doy, _round_to_nearest_day
+from ..extending_xarray_ops import da_circmean, da_circmean_doy, _round_to_nearest_day
 
 
 def da_equals_round(da0, da1, tol_decimals=14):

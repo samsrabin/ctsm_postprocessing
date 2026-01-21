@@ -5,27 +5,13 @@ Module to unit-test CropCaseList
 # pylint: disable=redefined-outer-name
 # Note: redefined-outer-name is disabled because pytest fixtures are used as test function parameters
 
-import sys
-import os
 import copy
 import pytest
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crop_case_list import CropCaseList
-    from ..crop_defaults import DEFAULT_CROPS_TO_INCLUDE
-    from .defaults import START_YEAR, END_YEAR, CESM_OUTPUT_DIR
-    from .test_sys_cropcase import check_crujra_matreqs_case_shared
-except ImportError:
-    # Add both the parent directory (for crops module) and grandparent (for test module)
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    grandparent_dir = os.path.dirname(parent_dir)
-    sys.path.insert(0, parent_dir)
-    sys.path.insert(0, grandparent_dir)
-    from crops.crop_case_list import CropCaseList
-    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
-    from test.defaults import START_YEAR, END_YEAR, CESM_OUTPUT_DIR
-    from test.test_sys_cropcase import check_crujra_matreqs_case_shared
+from ..crops.crop_case_list import CropCaseList
+from ..crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
+from .defaults import START_YEAR, END_YEAR, CESM_OUTPUT_DIR
+from .test_sys_cropcase import check_crujra_matreqs_case_shared
 
 CASE_NAME_LIST = ["crujra_matreqs", "crujra_matreqs_copy"]
 DEFAULT_OPTS = {}

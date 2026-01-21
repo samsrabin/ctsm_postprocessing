@@ -4,19 +4,10 @@ Module with functions for calculating crop biomass, ratios, etc.
 
 from __future__ import annotations
 
-import os
-import sys
-
 import numpy as np
 import xarray as xr
 
-try:
-    # Attempt relative import if running as part of a package
-    from .combine_cft_to_crop import combine_cft_to_crop
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.combine_cft_to_crop import combine_cft_to_crop
+from .combine_cft_to_crop import combine_cft_to_crop
 
 
 def _get_case_max_lai(cft_ds: xr.Dataset) -> xr.Dataset:

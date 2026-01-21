@@ -2,22 +2,14 @@
 Module to unit-test crop_secondary_variables.py
 """
 
-import sys
-import os
 import pytest
 import numpy as np
 import xarray as xr
 import cftime
 
-from hypothesis import assume, given, example, strategies as st
+from hypothesis import given, example, strategies as st
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crops import crop_secondary_variables as c2o
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from crops import crop_secondary_variables as c2o
+from ..crops import crop_secondary_variables as c2o
 
 # pylint: disable=protected-access
 # pylint: disable=too-many-public-methods

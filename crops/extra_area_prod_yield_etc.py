@@ -6,22 +6,13 @@ Calculate some extra area, prod, yield, etc. variables
 from __future__ import annotations
 
 import re
-import sys
-import os
 
 import numpy as np
 import xarray as xr
 
-try:
-    from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
-    from .mark_crops_invalid import mark_crops_invalid
-    from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
-    from crops.mark_crops_invalid import mark_crops_invalid
-    from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
+from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
+from .mark_crops_invalid import mark_crops_invalid
+from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
 
 # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
 MATURITY_LEVELS = {

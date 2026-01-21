@@ -14,23 +14,10 @@ import numpy as np
 import xarray as xr
 import pytest
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..cropcase import CropCase, CFT_DS_FILENAME
-    from ..crop_defaults import DEFAULT_CROPS_TO_INCLUDE
-    from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
-    from ..extra_area_prod_yield_etc import MATURITY_LEVELS
-except ImportError:
-    # Fallback to absolute import if running as a script
-    # Add both the parent directory (for crops module) and grandparent (for test module)
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    grandparent_dir = os.path.dirname(parent_dir)
-    sys.path.insert(0, parent_dir)
-    sys.path.insert(0, grandparent_dir)
-    from crops.cropcase import CropCase, CFT_DS_FILENAME
-    from crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
-    from crops.extra_area_prod_yield_etc import MATURITY_LEVELS
-    from test.defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
+from ..crops.cropcase import CropCase, CFT_DS_FILENAME
+from ..crops.crop_defaults import DEFAULT_CROPS_TO_INCLUDE
+from .defaults import START_YEAR, END_YEAR, CASE_NAME, FILE_DIR
+from ..crops.extra_area_prod_yield_etc import MATURITY_LEVELS
 
 # The first and last years we have test files for. Note that these refer to the years whose data is
 # included; add +1 to get years in filenames and netCDF timestamps.

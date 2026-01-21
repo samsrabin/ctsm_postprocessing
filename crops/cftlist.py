@@ -6,20 +6,9 @@ This module defines the CftList class, which represents a list of CFTs, and prov
 accessing and managing CFTs.
 """
 
-import os
-import sys
-
-try:
-    # Attempt relative import if running as part of a package
-    from .cft import Cft
-    # TODO: Future-proof default: Determine from ds upon initialization.
-    from .crop_defaults import DEFAULT_CFTS_TO_INCLUDE
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.cft import Cft
-    # TODO: Future-proof default: Determine from ds upon initialization.
-    from crops.crop_defaults import DEFAULT_CFTS_TO_INCLUDE
+from .cft import Cft
+# TODO: Future-proof default: Determine from ds upon initialization.
+from .crop_defaults import DEFAULT_CFTS_TO_INCLUDE
 
 
 class CftList:

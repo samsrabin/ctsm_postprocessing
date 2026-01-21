@@ -5,17 +5,9 @@ This module defines the CropList class, which represents a list of crops, and pr
 accessing crops by index or name.
 """
 
-import os
-import sys
 import numpy as np
 
-try:
-    # Attempt relative import if running as part of a package
-    from .crop import Crop
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.crop import Crop
+from .crop import Crop
 
 
 class CropList:

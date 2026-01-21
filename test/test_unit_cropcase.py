@@ -5,27 +5,16 @@ Module to unit-test functions in cropcase.py
 # pylint: disable=redefined-outer-name
 # Note: redefined-outer-name is disabled because pytest fixtures are used as test function parameters
 
-import sys
 import os
 import io
 from contextlib import redirect_stdout
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from tempfile import TemporaryDirectory
 import numpy as np
 import xarray as xr
 import pytest
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crops.cropcase import _save_cft_ds_to_netcdf, CropCase, CFT_DS_FILENAME
-except ImportError:
-    # Fallback to absolute import if running as a script
-    # Add both the parent directory (for crops module) and grandparent (for test module)
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    grandparent_dir = os.path.dirname(parent_dir)
-    sys.path.insert(0, parent_dir)
-    sys.path.insert(0, grandparent_dir)
-    from crops.cropcase import _save_cft_ds_to_netcdf, CropCase, CFT_DS_FILENAME
+from ..crops.cropcase import _save_cft_ds_to_netcdf, CropCase, CFT_DS_FILENAME
 
 # pylint: disable=too-many-public-methods
 # pylint: disable=too-few-public-methods
