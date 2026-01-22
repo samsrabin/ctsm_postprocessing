@@ -6,7 +6,6 @@ cases, updating crop data, and retrieving crop-specific information.
 """
 
 import os
-import sys
 import glob
 from time import time
 from typing import Union
@@ -16,29 +15,16 @@ from shutil import move
 import xarray as xr
 import numpy as np
 
+from .cftlist import CftList
+from .croplist import CropList
+from . import crop_secondary_variables as c2o
+from . import crop_utils as cu
+from .crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
+from .extra_area_prod_yield_etc import extra_area_prod_yield_etc
+from .crop_biomass import get_crop_biomass_vars
+
 # A type alias for convenience
 PathLike = Union[str, bytes, os.PathLike]
-
-try:
-    # Attempt relative import if running as part of a package
-    from .cftlist import CftList
-    from .croplist import CropList
-    from . import crop_secondary_variables as c2o
-    from . import crop_utils as cu
-    from .crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
-    from .extra_area_prod_yield_etc import extra_area_prod_yield_etc
-    from .crop_biomass import get_crop_biomass_vars
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.cftlist import CftList
-    from crops.croplist import CropList
-    import crops.crop_secondary_variables as c2o
-    import crops.crop_utils as cu
-    from crops.crop_defaults import N_PFTS, DEFAULT_CFTS_TO_INCLUDE, DEFAULT_CROPS_TO_INCLUDE
-    from crops.extra_area_prod_yield_etc import extra_area_prod_yield_etc
-    from crops.crop_biomass import get_crop_biomass_vars
-
 CFT_DS_FILENAME = "cft_ds.nc"
 CFT_DS_CHUNKING = {"cft": 1}
 
