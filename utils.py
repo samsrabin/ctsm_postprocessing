@@ -1,18 +1,28 @@
 """utility functions"""
 
+from __future__ import annotations
+
 # pylint: disable=wrong-import-position
 
 import re
 import warnings
 import importlib
+from typing import Any
 
 import cftime
 import numpy as np
 import xarray as xr
 
 
-# List of PFTs used in CLM
-def define_pftlist():
+def define_pftlist() -> list[str]:
+    """
+    Define the list of Plant Functional Types (PFTs) used in CLM.
+
+    Returns
+    -------
+    list[str]
+        List of PFT names in order, starting with 'not_vegetated' at index 0.
+    """
     pftlist = [
         "not_vegetated",
         "needleleaf_evergreen_temperate_tree",
@@ -97,8 +107,26 @@ def define_pftlist():
     return pftlist
 
 
-# Get CLM ivt name corresponding to a given number
-def ivt_int2str(ivt_int):
+def ivt_int2str(ivt_int: int | list | np.ndarray) -> str | list | np.ndarray:
+    """
+    Get CLM vegetation type name(s) corresponding to given integer(s).
+
+    Parameters
+    ----------
+    ivt_int : int | list | numpy.ndarray
+        Integer vegetation type index or collection of indices.
+
+    Returns
+    -------
+    str | list | numpy.ndarray
+        Vegetation type name(s) corresponding to the input index/indices.
+        Return type matches input type.
+
+    Raises
+    ------
+    RuntimeError
+        If input is a float (non-integer) or an unsupported type.
+    """
     pftlist = define_pftlist()
     if np.issubdtype(type(ivt_int), np.integer) or int(ivt_int) == ivt_int:
         ivt_str = pftlist[int(ivt_int)]
@@ -116,19 +144,37 @@ def ivt_int2str(ivt_int):
     return ivt_str
 
 
-# Does this vegetation type's name match (for a given comparison method) any member of a filtering list?
-"""
-Methods:
-    ok_contains:    True if any member of this_filter is found in this_vegtype.
-    notok_contains: True of no member of this_filter is found in this_vegtype.
-    ok_exact:       True if this_vegtype matches any member of this_filter 
-                    exactly.
-    notok_exact:    True if this_vegtype does not match any member of 
-                    this_filter exactly.
-"""
+def is_this_vegtype(
+    this_vegtype: str | int | np.int64, this_filter: list[str], this_method: str
+) -> bool:
+    """
+    Check if a vegetation type matches any member of a filtering list.
 
+    Parameters
+    ----------
+    this_vegtype : str | int | numpy.int64
+        Vegetation type to test (name or integer index).
+    this_filter : list[str]
+        List of strings to compare against.
+    this_method : str
+        Comparison method. Options:
+        - 'ok_contains': True if any member of this_filter is found in this_vegtype.
+        - 'notok_contains': True if no member of this_filter is found in this_vegtype.
+        - 'ok_exact': True if this_vegtype matches any member of this_filter exactly.
+        - 'notok_exact': True if this_vegtype doesn't match any member exactly.
 
-def is_this_vegtype(this_vegtype, this_filter, this_method):
+    Returns
+    -------
+    bool
+        Result of the comparison based on the specified method.
+
+    Raises
+    ------
+    TypeError
+        If this_vegtype is not a string or integer, or if this_filter is not iterable.
+    ValueError
+        If this_method is not one of the recognized comparison methods.
+    """
     # Make sure data type of this_vegtype is acceptable
     if isinstance(this_vegtype, float) and int(this_vegtype) == this_vegtype:
         this_vegtype = int(this_vegtype)
@@ -185,21 +231,69 @@ def is_this_vegtype(this_vegtype, this_filter, this_method):
 """
 
 
-def is_each_vegtype(this_vegtypelist, this_filter, this_method):
+def is_each_vegtype(
+    this_vegtypelist: list | np.ndarray | xr.DataArray, this_filter: list[str], this_method: str
+) -> list[bool]:
+    """
+    Get boolean list of whether each vegetation type matches the filter.
+
+    Parameters
+    ----------
+    this_vegtypelist : list | numpy.ndarray | xarray.DataArray
+        List of vegetation types to test.
+    this_filter : list[str]
+        List of strings to compare against each member of this_vegtypelist.
+    this_method : str
+        Comparison method. See is_this_vegtype() for options.
+
+    Returns
+    -------
+    list[bool]
+        Boolean list indicating whether each vegetation type matches the filter.
+    """
     if isinstance(this_vegtypelist, xr.DataArray):
         this_vegtypelist = this_vegtypelist.values
 
     return [is_this_vegtype(x, this_filter, this_method) for x in this_vegtypelist]
 
 
-# Helper function to check that a list is strictly increasing
-def is_strictly_increasing(L):
+def is_strictly_increasing(L: list) -> bool:
+    """
+    Check that a list is strictly increasing.
+
+    Parameters
+    ----------
+    L : list
+        List to check.
+
+    Returns
+    -------
+    bool
+        True if all elements are strictly increasing, False otherwise.
+    """
     # https://stackoverflow.com/a/4983359/2965321
     return all(x < y for x, y in zip(L, L[1:]))
 
 
-# Ensure that longitude axis coordinates are monotonically increasing
-def make_lon_increasing(xr_obj):
+def make_lon_increasing(xr_obj: xr.Dataset | xr.DataArray) -> xr.Dataset | xr.DataArray:
+    """
+    Ensure that longitude axis coordinates are monotonically increasing.
+
+    Parameters
+    ----------
+    xr_obj : xarray.Dataset | xarray.DataArray
+        Xarray object with longitude dimension.
+
+    Returns
+    -------
+    xarray.Dataset | xarray.DataArray
+        Object with longitude axis rearranged to be monotonically increasing.
+
+    Raises
+    ------
+    RuntimeError
+        If unable to rearrange longitude axis to be monotonically increasing.
+    """
     if not "lon" in xr_obj.dims:
         return xr_obj
 
@@ -217,8 +311,35 @@ def make_lon_increasing(xr_obj):
     return xr_obj.roll(lon=shift, roll_coords=True)
 
 
-# Convert a longitude axis that's 0 to 360 around the prime meridian to one that's -180 to 180 around the international date line. If you pass in a Dataset or DataArray, the "lon" coordinates will be changed and the axis and data rolled---i.e., maps will be centered on the prime meridian, plus or minus any offset of your gridcell centers. Otherwise, this assumes you're passing in numeric data, and no rolling takes place.
-def lon_pm2idl(lons_in, fail_silently=False):
+def lon_pm2idl(
+    lons_in: xr.Dataset | xr.DataArray | np.ndarray | float, fail_silently: bool = False
+) -> xr.Dataset | xr.DataArray | np.ndarray | float:
+    """
+    Convert longitude from 0-360 (centered at 180) to -180-180 (centered at 0).
+
+    If you pass in a Dataset or DataArray, the "lon" coordinates will be changed and the axis
+    and data rolled---i.e., maps will be centered on the prime meridian, plus or minus any
+    offset of your gridcell centers. Otherwise, this assumes you're passing in numeric data,
+    and no rolling takes place.
+
+    Parameters
+    ----------
+    lons_in : xarray.Dataset | xarray.DataArray | numpy.ndarray | float
+        Longitude data to convert.
+    fail_silently : bool, optional
+        If True, return input unchanged if conversion is not appropriate. Default is False.
+
+    Returns
+    -------
+    xarray.Dataset | xarray.DataArray | numpy.ndarray | float
+        Converted longitude data, or original data if fail_silently=True and conversion
+        is not appropriate.
+
+    Raises
+    ------
+    ValueError
+        If input has longitudes < 0 or > 360 and fail_silently=False.
+    """
     def check_ok(tmp, fail_silently):
         msg = ""
         if np.any(tmp < 0):
@@ -261,8 +382,31 @@ def lon_pm2idl(lons_in, fail_silently=False):
     return lons_out
 
 
-# Convert list of vegtype strings to integer index equivalents.
-def vegtype_str2int(vegtype_str, vegtype_mainlist=None):
+def vegtype_str2int(
+    vegtype_str: str | list[str] | np.ndarray,
+    vegtype_mainlist: list[str] | xr.Dataset | xr.DataArray | None = None,
+) -> list[int] | np.ndarray:
+    """
+    Convert vegetation type name(s) to integer index/indices.
+
+    Parameters
+    ----------
+    vegtype_str : str | list[str] | numpy.ndarray
+        Vegetation type name(s) to convert.
+    vegtype_mainlist : list[str] | xarray.Dataset | xarray.DataArray | None, optional
+        List of vegetation type names to use for conversion. Can also be a Dataset or DataArray
+        containing vegtype_str values. If None, uses define_pftlist().
+
+    Returns
+    -------
+    list[int] | numpy.ndarray
+        Integer index/indices corresponding to the vegetation type name(s).
+
+    Raises
+    ------
+    TypeError
+        If vegtype_mainlist is not a list of strings, Dataset, DataArray, or None.
+    """
     convert_to_ndarray = not isinstance(vegtype_str, np.ndarray)
     if convert_to_ndarray:
         vegtype_str = np.array(vegtype_str)
@@ -294,9 +438,43 @@ def vegtype_str2int(vegtype_str, vegtype_mainlist=None):
     return indices
 
 
-# Flexibly subset time(s) and/or vegetation type(s) from an xarray Dataset or DataArray. Keyword arguments like dimension=selection. Selections can be individual values or slice()s. Optimize memory usage by beginning keyword argument list with the selections that will result in the largest reduction of object size. Use dimension "vegtype" to extract patches of designated vegetation type (can be string or integer).
-# Can also do dimension=function---e.g., time=np.mean will take the mean over the time dimension.
-def xr_flexsel(xr_object, patches1d_itype_veg=None, warn_about_seltype_interp=True, **kwargs):
+def xr_flexsel(
+    xr_object: xr.Dataset | xr.DataArray,
+    patches1d_itype_veg: xr.DataArray | None = None,
+    warn_about_seltype_interp: bool = True,
+    **kwargs,
+) -> xr.Dataset | xr.DataArray:
+    """
+    Flexibly subset time(s) and/or vegetation type(s) from an xarray Dataset or DataArray.
+
+    Keyword arguments like dimension=selection. Selections can be individual values or slice()s.
+    Optimize memory usage by beginning keyword argument list with the selections that will result
+    in the largest reduction of object size. Use dimension "vegtype" to extract patches of
+    designated vegetation type (can be string or integer). Can also do dimension=function---e.g.,
+    time=np.mean will take the mean over the time dimension.
+
+    Parameters
+    ----------
+    xr_object : xarray.Dataset | xarray.DataArray
+        Xarray object to subset.
+    patches1d_itype_veg : xarray.DataArray | None, optional
+        DataArray containing vegetation type information for patches. If None, will try to
+        extract from xr_object.
+    warn_about_seltype_interp : bool, optional
+        Whether to warn about selection type interpolation. Default is True.
+    **kwargs
+        Dimension=selection pairs for subsetting.
+
+    Returns
+    -------
+    xarray.Dataset | xarray.DataArray
+        Subsetted xarray object.
+
+    Raises
+    ------
+    ValueError
+        If unable to perform requested operation.
+    """
     # Setup
     havewarned = False
     delimiter = "__"
@@ -484,8 +662,23 @@ def xr_flexsel(xr_object, patches1d_itype_veg=None, warn_about_seltype_interp=Tr
     return xr_object
 
 
-# Get PFT of each patch, in both integer and string forms.
-def get_patch_ivts(this_ds, this_pftlist):
+def get_patch_ivts(this_ds: xr.Dataset, this_pftlist: list[str]) -> dict[str, Any]:
+    """
+    Get PFT of each patch in both integer and string forms.
+
+    Parameters
+    ----------
+    this_ds : xarray.Dataset
+        Dataset containing patches1d_itype_veg variable.
+    this_pftlist : list[str]
+        List of PFT names.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary with keys 'int' (DataArray of integer PFT indices), 'str' (list of PFT name
+        strings), and 'all_str' (the input pftlist).
+    """
     # First, get all the integer values; should be time*pft or pft*time. We will eventually just take the first timestep.
     vegtype_int = this_ds.patches1d_itype_veg
     vegtype_int.values = vegtype_int.values.astype(int)
@@ -497,8 +690,22 @@ def get_patch_ivts(this_ds, this_pftlist):
     return {"int": vegtype_int, "str": vegtype_str, "all_str": this_pftlist}
 
 
-# Convert a list of strings with vegetation type names into a DataArray. Used to add vegetation type info in import_ds().
-def get_vegtype_str_da(vegtype_str):
+def get_vegtype_str_da(vegtype_str: list[str]) -> xr.DataArray:
+    """
+    Convert a list of vegetation type names into a DataArray.
+
+    Used to add vegetation type info in import_ds().
+
+    Parameters
+    ----------
+    vegtype_str : list[str]
+        List of vegetation type names.
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray with vegetation type names indexed by ivt.
+    """
     nvt = len(vegtype_str)
     thisName = "vegtype_str"
     vegtype_str_da = xr.DataArray(
@@ -507,9 +714,34 @@ def get_vegtype_str_da(vegtype_str):
     return vegtype_str_da
 
 
-# Function to drop unwanted variables in preprocessing of open_mfdataset(), making sure to NOT drop any unspecified variables that will be useful in gridding. Also adds vegetation type info in the form of a DataArray of strings.
-# Also renames "pft" dimension (and all like-named variables, e.g., pft1d_itype_veg_str) to be named like "patch". This can later be reversed, for compatibility with other code, using patch2pft().
-def mfdataset_preproc(ds, vars_to_import, vegtypes_to_import, timeSlice):
+def mfdataset_preproc(
+    ds: xr.Dataset,
+    vars_to_import: list[str] | str,
+    vegtypes_to_import: list[str] | str,
+    timeSlice: slice | None,
+) -> xr.Dataset:
+    """
+    Preprocess dataset for open_mfdataset(), dropping unwanted variables and adding vegtype info.
+
+    Also renames "pft" dimension (and all like-named variables) to be named like "patch".
+    This can later be reversed for compatibility with other code using patch2pft().
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to preprocess.
+    vars_to_import : list[str] | str
+        Variables to import.
+    vegtypes_to_import : list[str] | str
+        Vegetation types to import.
+    timeSlice : slice | None
+        Time slice to apply, or None for all times.
+
+    Returns
+    -------
+    xarray.Dataset
+        Preprocessed dataset.
+    """
     # Rename "pft" dimension and variables to "patch", if needed
     if "pft" in ds.dims:
         pattern = re.compile("pft.*1d")
@@ -606,17 +838,46 @@ def mfdataset_preproc(ds, vars_to_import, vegtypes_to_import, timeSlice):
     return ds
 
 
-# Import a dataset that can be spread over multiple files, only including specified variables and/or vegetation types and/or timesteps, concatenating by time. DOES actually read the dataset into memory, but only AFTER dropping unwanted variables and/or vegetation types.
 def import_ds(
-    filelist,
-    myVars=None,
-    myVegtypes=None,
-    timeSlice=None,
-    myVars_missing_ok=[],
-    only_active_patches=False,
-    rename_lsmlatlon=False,
-    chunks=None,
-):
+    filelist: str | list[str],
+    myVars: str | list[str] | None = None,
+    myVegtypes: str | list[str] | list[int] | None = None,
+    timeSlice: slice | None = None,
+    myVars_missing_ok: str | list[str] = [],
+    only_active_patches: bool = False,
+    rename_lsmlatlon: bool = False,
+    chunks: dict | None = None,
+) -> xr.Dataset:
+    """
+    Import dataset(s) with flexible filtering by variables, vegetation types, and time.
+
+    Can be spread over multiple files, only including specified variables and/or vegetation
+    types and/or timesteps, concatenating by time.
+
+    Parameters
+    ----------
+    filelist : str | list[str]
+        File path(s) to import.
+    myVars : str | list[str] | None, optional
+        Variable(s) to import. If None, imports all variables.
+    myVegtypes : str | list[str] | list[int] | None, optional
+        Vegetation type(s) to import (names or integer indices). If None, imports all types.
+    timeSlice : slice | None, optional
+        Time slice to apply. Format: slice(start, end[, step]). If None, imports all times.
+    myVars_missing_ok : str | list[str], optional
+        Variable(s) that are allowed to be missing. Default is empty list.
+    only_active_patches : bool, optional
+        Whether to only include active patches. Default is False.
+    rename_lsmlatlon : bool, optional
+        Whether to rename lsmlat/lsmlon to lat/lon. Default is False.
+    chunks : dict | None, optional
+        Chunking specification for dask. If None, no chunking is applied.
+
+    Returns
+    -------
+    xarray.Dataset
+        Imported and filtered dataset.
+    """
     # Convert myVegtypes here, if needed, to avoid repeating the process each time you read a file in xr.open_mfdataset().
     if myVegtypes != None:
         if not isinstance(myVegtypes, list):
@@ -717,8 +978,22 @@ def import_ds(
     return this_ds
 
 
-# Return a DataArray, with defined coordinates, for a given variable in a dataset.
-def get_thisVar_da(thisVar, this_ds):
+def get_thisVar_da(thisVar: str, this_ds: xr.Dataset) -> xr.DataArray:
+    """
+    Return a DataArray with defined coordinates for a given variable in a dataset.
+
+    Parameters
+    ----------
+    thisVar : str
+        Name of the variable to extract.
+    this_ds : xarray.Dataset
+        Dataset containing the variable.
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray for the specified variable with coordinates and attributes.
+    """
     # Make DataArray for this variable
     thisvar_da = np.array(this_ds.variables[thisVar])
     theseDims = this_ds.variables[thisVar].dims
@@ -734,10 +1009,38 @@ def get_thisVar_da(thisVar, this_ds):
     return thisvar_da
 
 
-# Make a geographically gridded DataArray (with dimensions time, vegetation type [as string], lat, lon) of one variable within a Dataset. Optional keyword arguments will be passed to xr_flexsel() to select single steps or slices along the specified ax(ie)s.
-#
-# fillValue: Default None means grid will be filled with NaN, unless the variable in question already has a fillValue, in which case that will be used.
-def grid_one_variable(this_ds, thisVar, fillValue=None, **kwargs):
+def grid_one_variable(
+    this_ds: xr.Dataset, thisVar: str, fillValue: float | None = None, **kwargs
+) -> xr.DataArray:
+    """
+    Make a geographically gridded DataArray of one variable within a Dataset.
+
+    Creates a DataArray with dimensions (time, vegetation type [as string], lat, lon).
+    Optional keyword arguments will be passed to xr_flexsel() to select single steps or slices
+    along the specified ax(ie)s.
+
+    Parameters
+    ----------
+    this_ds : xarray.Dataset
+        Dataset containing the variable to grid.
+    thisVar : str
+        Name of the variable to grid.
+    fillValue : float | None, optional
+        Fill value for the grid. Default None means grid will be filled with NaN, unless the
+        variable already has a _FillValue attribute, in which case that will be used.
+    **kwargs
+        Additional keyword arguments passed to xr_flexsel() for subsetting.
+
+    Returns
+    -------
+    xarray.DataArray
+        Gridded DataArray with dimensions including lat and lon.
+
+    Raises
+    ------
+    RuntimeError
+        If unable to determine appropriate variables for gridding.
+    """
     # Get this Dataset's values for selection(s), if provided
     this_ds = xr_flexsel(this_ds, **kwargs)
 
@@ -887,8 +1190,30 @@ def ungrid(
     return ungridded
 
 
-# ctsm_pylib can't handle time slicing like Dataset.sel(time=slice("1998-01-01", "2005-12-31")) for some reason. This function tries to fall back to slicing by integers. It should work with both Datasets and DataArrays.
-def safer_timeslice(ds, timeSlice, timeVar="time"):
+def safer_timeslice(ds: xr.Dataset, timeSlice: slice, timeVar: str = "time") -> xr.Dataset:
+    """
+    Safely slice a dataset by time, with fallback to integer slicing if needed. Was necessary for
+    Xarray before python3.8.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to slice.
+    timeSlice : slice
+        Time slice to apply. Format: slice(start, end[, step]).
+    timeVar : str, optional
+        Name of the time variable. Default is "time".
+
+    Returns
+    -------
+    xarray.Dataset
+        Time-sliced dataset.
+
+    Raises
+    ------
+    Exception
+        If slicing fails and fallback to integer slicing is not possible.
+    """
     try:
         ds = ds.sel({timeVar: timeSlice})
     except:
@@ -919,9 +1244,34 @@ def safer_timeslice(ds, timeSlice, timeVar="time"):
     return ds
 
 
-def food_grainc_to_harvested_tons_onecrop(data_in, this_crop):
+def food_grainc_to_harvested_tons_onecrop(
+    data_in: np.ndarray | xr.DataArray, this_crop: str
+) -> np.ndarray | xr.DataArray:
     """
-    Convert GRAINC_TO_FOOD* (carbon) to amount harvested (total biomass plus water weight, minus harvest loss) for one crop. Same procedure as used in Rabin et al. (2023, doi:10.5194/gmd-16-7253-2023). Conversion from /m2 to /ha or whatever needs to happen elsewhere.
+    Convert GRAINC_TO_FOOD* (carbon) to amount harvested for one crop.
+
+    Converts grain carbon to total biomass plus water weight, minus harvest loss. Same procedure
+    as used in Rabin et al. (2023, doi:10.5194/gmd-16-7253-2023). Conversion from /m2 to /ha or
+    whatever needs to happen elsewhere.
+
+    Parameters
+    ----------
+    data_in : numpy.ndarray | xarray.DataArray
+        Grain carbon data to convert.
+    this_crop : str
+        Crop name (e.g., 'corn', 'rice', 'temperate_corn', 'irrigated_wheat'). Prefixes like
+        'temperate_', 'tropical_', 'irrigated_', 'spring_', and 'winter_' are automatically
+        removed for matching.
+
+    Returns
+    -------
+    numpy.ndarray | xarray.DataArray
+        Converted harvest data in the same type as input.
+
+    Raises
+    ------
+    KeyError
+        If this_crop (after prefix removal) is not found in the drymatter_fractions dictionary.
     """
     # Parameters from Lombardozzi et al. (2020, doi:10.1029/2019jg005529)
     fyield = 0.85  # 85% harvest efficiency (Kucharik & Brye, 2003, doi:10.2134/jeq2003.2470)
