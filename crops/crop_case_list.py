@@ -4,27 +4,34 @@ A class for holding a list of CropCases and information about them
 
 from __future__ import annotations
 
-import copy
 import os
-import sys
 import warnings
+from typing import Any
 from time import time
 
-try:
-    # Attempt relative import if running as part of a package
-    from .cropcase import CropCase
-    from ..resolutions import identify_resolution
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.cropcase import CropCase
-    from resolutions import identify_resolution
+import xarray as xr
+
+from .cropcase import CropCase
+from ..resolutions import identify_resolution
 
 # The variables needed for regridding
 REGRID_VARS = ["area", "landfrac", "landmask"]
 
 
-def _ds_has_regrid_vars(ds):
+def _ds_has_regrid_vars(ds: xr.Dataset) -> bool:
+    """
+    Check if a dataset has all required regridding variables.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to check for regridding variables.
+
+    Returns
+    -------
+    bool
+        True if all REGRID_VARS are present in the dataset, False otherwise.
+    """
     return all(v in ds.variables for v in REGRID_VARS)
 
 
@@ -36,8 +43,25 @@ class CropCaseList(list):
     def __init__(
         self,
         *args,
-        opts,
-    ):
+        opts: dict[str, Any],
+    ) -> None:
+        """
+        Initialize a CropCaseList instance.
+
+        Parameters
+        ----------
+        *args
+            Arguments passed to list initialization.
+        opts : dict[str, Any]
+            Dictionary containing configuration options. Expected keys include:
+            - case_name_list: List of case names to import
+            - CESM_output_dir: Directory containing CESM output
+            - start_year: Starting year for data
+            - end_year: Ending year for data
+            - verbose: Whether to print verbose output
+            - force_new_cft_ds_file: Whether to force creation of new CFT dataset files
+            - force_no_cft_ds_file: Whether to avoid using CFT dataset files
+        """
         # Initialize as a normal list...
         super().__init__(*args)
         # ...And then add all the extra stuff
@@ -58,7 +82,17 @@ class CropCaseList(list):
             # Get minimum Dataset needed for regridding EarthStat to match
             self._save_or_check_regrid_ds(case, res)
 
-    def _save_or_check_regrid_ds(self, case, res):
+    def _save_or_check_regrid_ds(self, case: CropCase, res: str) -> None:
+        """
+        Save or check regridding dataset for a given resolution.
+
+        Parameters
+        ----------
+        case : CropCase
+            Case containing the dataset to process.
+        res : str
+            Resolution identifier.
+        """
         vars_to_drop = [v for v in case.cft_ds if v not in REGRID_VARS]
         regrid_ds = case.cft_ds.drop_vars(vars_to_drop)
 
@@ -75,7 +109,19 @@ class CropCaseList(list):
         else:
             self._check_regrid_ds(case, res, regrid_ds)
 
-    def _check_regrid_ds(self, case, res, regrid_ds):
+    def _check_regrid_ds(self, case: CropCase, res: str, regrid_ds: xr.Dataset) -> None:
+        """
+        Check that regridding dataset matches previously saved dataset for this resolution.
+
+        Parameters
+        ----------
+        case : CropCase
+            Case being checked.
+        res : str
+            Resolution identifier.
+        regrid_ds : xarray.Dataset
+            Dataset to check against saved dataset.
+        """
         saved_vars = set(self.resolutions[res].keys())
         this_vars = set(regrid_ds.keys())
 
@@ -99,7 +145,20 @@ class CropCaseList(list):
                     UserWarning,
                 )
 
-    def _check_attrs_match(self, other):
+    def _check_attrs_match(self, other: CropCaseList) -> bool:
+        """
+        Check if all attributes match between this and another CropCaseList.
+
+        Parameters
+        ----------
+        other : CropCaseList
+            CropCaseList to compare with.
+
+        Returns
+        -------
+        bool
+            True if all attributes match, False otherwise.
+        """
         for attr in [a for a in dir(self) if not a.startswith("__")]:
             # Skip callable attributes (methods)
             if callable(getattr(self, attr)):
@@ -117,7 +176,25 @@ class CropCaseList(list):
                 return False
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        """
+        Compare two CropCaseList instances for equality.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare with this CropCaseList instance.
+
+        Returns
+        -------
+        bool
+            True if both CropCaseList instances are equal, False otherwise.
+
+        Raises
+        ------
+        TypeError
+            If other is not a CropCaseList instance.
+        """
         # Check that they're both CropCaseLists
         if not isinstance(other, self.__class__):
             raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
@@ -135,13 +212,36 @@ class CropCaseList(list):
                 return False
         return True
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
+        """
+        Compare two CropCaseList instances for inequality.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare with this CropCaseList instance.
+
+        Returns
+        -------
+        bool
+            True if CropCaseList instances are not equal, False otherwise.
+        """
         return not self == other
 
     def _import_cases(
         self,
-        opts,
-    ):
+        opts: dict[str, Any],
+    ) -> None:
+        """
+        Import all cases specified in opts.
+
+        Parameters
+        ----------
+        opts : dict[str, Any]
+            Dictionary containing configuration options including case_name_list,
+            CESM_output_dir, start_year, end_year, verbose, force_new_cft_ds_file,
+            and force_no_cft_ds_file.
+        """
         start = time()
         for case_name in self.names:
             print(f"Importing {case_name}...")
@@ -174,10 +274,15 @@ class CropCaseList(list):
             print(f"Importing took {int(end - start)} s")
 
     @classmethod
-    def _create_empty(cls):
+    def _create_empty(cls) -> CropCaseList:
         """
         Create an empty CropCaseList without going through the normal initialization (i.e., import).
         Used internally by sel() and isel() for creating copies.
+
+        Returns
+        -------
+        CropCaseList
+            Empty CropCaseList instance.
         """
         # Create instance without calling __init__
         instance = cls.__new__(cls)
@@ -185,9 +290,19 @@ class CropCaseList(list):
         list.__init__(instance)
         return instance
 
-    def _copy_attributes(self, dest_case_list):
+    def _copy_attributes(self, dest_case_list: CropCaseList) -> CropCaseList:
         """
         Copy all CropCaseList attributes from self to destination CropCaseList.
+
+        Parameters
+        ----------
+        dest_case_list : CropCaseList
+            Destination CropCaseList to copy attributes to.
+
+        Returns
+        -------
+        CropCaseList
+            The destination CropCaseList with copied attributes.
         """
         for attr in [a for a in dir(self) if not a.startswith("__")]:
             # Skip callable attributes (methods) - they should be inherited from the class
@@ -196,9 +311,21 @@ class CropCaseList(list):
             setattr(dest_case_list, attr, getattr(self, attr))
         return dest_case_list
 
-    def sel(self, *args, **kwargs):
+    def sel(self, *args, **kwargs) -> CropCaseList:
         """
         Makes a copy of this CropCaseList, applying CropCase.sel() with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to CropCase.sel().
+        **kwargs
+            Keyword arguments passed to CropCase.sel().
+
+        Returns
+        -------
+        CropCaseList
+            New CropCaseList with sel() applied to each case.
         """
         new_case_list = self._create_empty()
 
@@ -210,9 +337,21 @@ class CropCaseList(list):
         new_case_list = self._copy_attributes(new_case_list)
         return new_case_list
 
-    def isel(self, *args, **kwargs):
+    def isel(self, *args, **kwargs) -> CropCaseList:
         """
         Makes a copy of this CropCaseList, applying CropCase.isel() with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to CropCase.isel().
+        **kwargs
+            Keyword arguments passed to CropCase.isel().
+
+        Returns
+        -------
+        CropCaseList
+            New CropCaseList with isel() applied to each case.
         """
         new_case_list = self._create_empty()
 

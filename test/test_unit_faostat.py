@@ -2,19 +2,12 @@
 Module to unit-test faostat.py
 """
 
-import sys
 import os
 import unittest
 import numpy as np
 import pandas as pd
 
-try:
-    # Attempt relative import if running as part of a package
-    from ..crops import faostat
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from crops import faostat
+from ..crops import faostat
 
 # pylint: disable=protected-access
 # pylint: disable=too-many-public-methods

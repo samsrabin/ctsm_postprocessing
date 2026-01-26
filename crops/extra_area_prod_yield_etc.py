@@ -6,22 +6,17 @@ Calculate some extra area, prod, yield, etc. variables
 from __future__ import annotations
 
 import re
-import sys
-import os
+from typing import TYPE_CHECKING
 
 import numpy as np
 import xarray as xr
 
-try:
-    from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
-    from .mark_crops_invalid import mark_crops_invalid
-    from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
-    from crops.mark_crops_invalid import mark_crops_invalid
-    from utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
+from .combine_cft_to_crop import get_cft_crop_da, get_all_cft_crop_das, combine_cft_to_crop
+from .mark_crops_invalid import mark_crops_invalid
+from ..utils import food_grainc_to_harvested_tons_onecrop, ivt_int2str
+
+if TYPE_CHECKING:
+    from .cropcase import CropCase
 
 # Dictionary with keys the string to use in var names, values min. HUI (fraction) to qualify
 MATURITY_LEVELS = {
@@ -31,9 +26,28 @@ MATURITY_LEVELS = {
 }
 
 
-def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
+def extra_area_prod_yield_etc(
+    crops_to_include: list[str], case: CropCase, case_ds: xr.Dataset
+) -> xr.Dataset:
     """
-    Calculate some extra area, prod, yield, etc. variables
+    Calculate extra area, production, yield, and related variables for crops.
+
+    This function processes crop data to calculate various metrics at different maturity levels,
+    including CFT and crop-level area, production, and yield statistics.
+
+    Parameters
+    ----------
+    crops_to_include : list[str]
+        List of crop names to process.
+    case : CropCase
+        Case object containing crop definitions and PFT mappings.
+    case_ds : xarray.Dataset
+        Dataset containing CFT-level crop data.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added area, production, and yield variables at CFT and crop levels.
     """
 
     # Get crop products at various levels of maturity
@@ -83,9 +97,22 @@ def extra_area_prod_yield_etc(crops_to_include, case, case_ds):
     return case_ds
 
 
-def _get_crop_products(cft_ds):
+def _get_crop_products(cft_ds: xr.Dataset) -> xr.Dataset:
     """
-    Get crop products for various levels of maturity
+    Get crop products for various levels of maturity.
+
+    Processes crop data to identify viable harvests at different maturity levels (ANY, MARKETABLE,
+    MATURE) and calculates corresponding yield values.
+
+    Parameters
+    ----------
+    cft_ds : xarray.Dataset
+        Dataset containing CFT-level crop data.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added crop product variables for each maturity level.
     """
 
     for m, min_viable_hui in MATURITY_LEVELS.items():
@@ -105,7 +132,30 @@ def _get_crop_products(cft_ds):
     return cft_ds
 
 
-def _get_yield(cft_ds, m):
+def _get_yield(cft_ds: xr.Dataset, m: str) -> xr.Dataset:
+    """
+    Calculate actual yield (wet matter) for a given maturity level.
+
+    Converts grain carbon to harvested tons and creates per-harvest and annual yield variables.
+
+    Parameters
+    ----------
+    cft_ds : xarray.Dataset
+        Dataset containing CFT-level crop data.
+    m : str
+        Maturity level identifier (e.g., 'ANY', 'MARKETABLE', 'MATURE').
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added yield variables for the specified maturity level.
+
+    Raises
+    ------
+    NotImplementedError
+        If the 'cft' dimension is not the 0th dimension in the grain carbon variable.
+    """
+
     c_var = f"GRAINC_TO_FOOD_{m}_PERHARV"
     if c_var not in cft_ds:
         print(f"WARNING: Will not calculate yield because {c_var} not in cft_ds")
@@ -136,7 +186,29 @@ def _get_yield(cft_ds, m):
     return cft_ds
 
 
-def _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var):
+def _mark_invalid_harvests_as_zero(
+    cft_ds: xr.Dataset, m: str, viable_harv_var: str
+) -> xr.Dataset:
+    """
+    Mark invalid harvests as zero for grain carbon and nitrogen variables.
+
+    Creates new variables for each maturity level where invalid harvests are set to zero.
+
+    Parameters
+    ----------
+    cft_ds : xarray.Dataset
+        Dataset containing CFT-level crop data.
+    m : str
+        Maturity level identifier (e.g., 'ANY', 'MARKETABLE', 'MATURE').
+    viable_harv_var : str
+        Name of the variable indicating viable harvests.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added variables for valid harvests at the specified maturity level.
+    """
+
     product_list = ["FOOD", "SEED"]
     for p in product_list:
         for v in cft_ds:
@@ -160,10 +232,26 @@ def _mark_invalid_harvests_as_zero(cft_ds, m, viable_harv_var):
     return cft_ds
 
 
-def _get_yield_and_croplevel_stats(case_ds, m):
+def _get_yield_and_croplevel_stats(case_ds: xr.Dataset, m: str) -> xr.Dataset:
     """
-    Calculate yield, then consolidate CFT-level stats to crop-level
+    Calculate yield and consolidate CFT-level statistics to crop-level.
+
+    Computes CFT-level yields, then aggregates CFT data to crop level for area, production,
+    and yield.
+
+    Parameters
+    ----------
+    case_ds : xarray.Dataset
+        Dataset containing CFT-level crop data.
+    m : str
+        Maturity level identifier (e.g., 'ANY', 'MARKETABLE', 'MATURE').
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added crop-level area, production, and yield variables.
     """
+
     crop_prod_var = f"crop_prod_{m.lower()}"
     crop_cft_prod_var = crop_prod_var.replace("crop", "crop_cft")
     crop_cft_yield_var = crop_cft_prod_var.replace("prod", "yield")
@@ -186,7 +274,24 @@ def _get_yield_and_croplevel_stats(case_ds, m):
     return case_ds
 
 
-def _harvest_area_stats(case_ds):
+def _harvest_area_stats(case_ds: xr.Dataset) -> xr.Dataset:
+    """
+    Calculate harvest area statistics at CFT and crop levels.
+
+    Computes planted area, harvested area, immature harvest area, and unmarketable harvest area
+    for both CFTs and crops.
+
+    Parameters
+    ----------
+    case_ds : xarray.Dataset
+        Dataset containing CFT-level crop data with harvest reason information.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added harvest area statistics variables.
+    """
+
     # Get CFT planted area
     hr = case_ds["HARVEST_REASON_PERHARV"]
     cft_planted_area = (case_ds["pfts1d_landarea"] * case_ds["pfts1d_wtgcell"]).where(

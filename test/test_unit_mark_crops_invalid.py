@@ -2,16 +2,11 @@
 Module to unit-test mark_crops_invalid.py
 """
 
-import sys
-import os
 import unittest
 import numpy as np
 import xarray as xr
 
-# pylint: disable=wrong-import-position
-x = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(x)
-from crops import mark_crops_invalid as mci
+from ..crops import mark_crops_invalid as mci
 
 # pylint: disable=protected-access
 # pylint: disable=too-many-public-methods

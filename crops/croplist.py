@@ -5,17 +5,10 @@ This module defines the CropList class, which represents a list of crops, and pr
 accessing crops by index or name.
 """
 
-import os
-import sys
 import numpy as np
 
-try:
-    # Attempt relative import if running as part of a package
-    from .crop import Crop
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.crop import Crop
+from .cftlist import CftList
+from .crop import Crop
 
 
 class CropList:
@@ -23,32 +16,60 @@ class CropList:
     Represents a list of crops in the Community Terrestrial Systems Model (CTSM).
 
     Attributes:
-        crop_list (list): List of Crop objects.
+        crop_list (list[Crop]): List of Crop objects.
     """
 
-    def __init__(self, crops_to_include, cft_list, ds):
+    def __init__(self, crops_to_include: list[str], cft_list: CftList) -> None:
         """
         Initialize a CropList instance.
 
         Parameters:
-            crops_to_include (list): List of crop names to include.
-            cft_list (list): List of CFTs to include in the crops.
-            ds (xarray.Dataset): Dataset containing crop data.
+            crops_to_include (list[str]): List of crop names to include.
+            cft_list (CftList): CftList instance containing CFTs to include in the crops.
+
+        Raises:
+            ValueError: If crops_to_include contains duplicate crop names.
+            RuntimeError: If no crops from crops_to_include are found in cft_list.
         """
         if len(crops_to_include) != len(np.unique(crops_to_include)):
             raise ValueError("Duplicate crop(s) found in crops_to_include")
-        self.crop_list = [Crop(x, cft_list, ds) for x in crops_to_include]
+        self.crop_list: list[Crop] = [Crop(x, cft_list) for x in crops_to_include]
         if not self.crop_list:
             raise RuntimeError("No crops_to_include found in cft_list")
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        """
+        Compare two CropList instances for equality.
+
+        Parameters:
+            other (object): Object to compare with this CropList instance.
+
+        Returns:
+            bool: True if both CropList instances have equal crop_list attributes, False otherwise.
+
+        Raises:
+            TypeError: If other is not a CropList instance.
+        """
         # Check that they're both CropLists
         if not isinstance(other, self.__class__):
             raise TypeError(f"== not supported between {self.__class__} and {type(other)}")
         result = self.crop_list == other.crop_list
         return result
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int | str) -> Crop:
+        """
+        Get a Crop by index or name.
+
+        Parameters:
+            index (int | str): Integer index or string name of the crop to retrieve.
+
+        Returns:
+            Crop: The Crop at the specified index or with the specified name.
+
+        Raises:
+            KeyError: If a string index is provided but no crop with that name is found.
+            RuntimeError: If crop_list is empty when searching by name.
+        """
         if isinstance(index, str):
             found = False
             i = None
@@ -63,7 +84,13 @@ class CropList:
             return self.crop_list[i]
         return self.crop_list[index]
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Return a string representation of the CropList instance.
+
+        Returns:
+            str: Multi-line string with each Crop's string representation on a separate line.
+        """
         results = []
         for crop in self.crop_list:
             results.append(str(crop))

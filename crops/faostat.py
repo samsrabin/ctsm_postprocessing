@@ -5,6 +5,8 @@ Specifically, this lets you work with a "normalized" CSV file from the "Producti
 livestock products" database.
 """
 
+from __future__ import annotations
+
 # pylint: disable=too-few-public-methods
 
 import pandas as pd
@@ -13,9 +15,29 @@ import numpy as np
 pd.options.mode.copy_on_write = True
 
 
-def extract_clm_crops(data, fao_to_clm_dict):
+def extract_clm_crops(data: pd.DataFrame, fao_to_clm_dict: dict[str, str]) -> pd.DataFrame:
     """
-    Extract just the crops we care about for CLM, renamed to match CLM names
+    Extract just the crops we care about for CLM, renamed to match CLM names.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        FAOSTAT DataFrame containing crop data with a 'Crop' column.
+    fao_to_clm_dict : dict[str, str]
+        Dictionary mapping FAO crop names (keys) to CLM crop names (values).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Filtered DataFrame containing only the specified crops, with crop names renamed to
+        match CLM conventions.
+
+    Raises
+    ------
+    KeyError
+        If any crop from fao_to_clm_dict is not found in the FAOSTAT data.
+    RuntimeError
+        If the number of unique crops after extraction doesn't match the dictionary length.
     """
     # Extract
     fao_crops = data.Crop.unique()
@@ -33,9 +55,32 @@ def extract_clm_crops(data, fao_to_clm_dict):
     return data
 
 
-def restrict_years(data, *, y1=None, yN=None):
+def restrict_years(
+    data: pd.DataFrame, *, y1: int | None = None, yN: int | None = None
+) -> pd.DataFrame:
     """
-    Restrict an FAOSTAT DataFrame based on start and/or end year of interest
+    Restrict an FAOSTAT DataFrame based on start and/or end year of interest.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        FAOSTAT DataFrame containing a 'Year' column.
+    y1 : int | None, optional
+        Minimum year to include. If None, no lower bound is applied.
+    yN : int | None, optional
+        Maximum year to include. If None, no upper bound is applied.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Filtered DataFrame containing only data within the specified year range.
+
+    Raises
+    ------
+    NotImplementedError
+        If y1 > yN.
+    KeyError
+        If no data is found within the specified year range.
     """
     if y1 == yN == None:
         return data
@@ -59,11 +104,38 @@ def restrict_years(data, *, y1=None, yN=None):
 
 class FaostatProductionCropsLivestock:
     """
-    Class for reading, storing, and working with FAOSTAT data
+    Class for reading, storing, and working with FAOSTAT data.
+
+    Attributes
+    ----------
+    file_path : str
+        Path to the FAOSTAT CSV file.
+    data : pandas.DataFrame
+        DataFrame containing the FAOSTAT data.
     """
 
-    def __init__(self, file_path, *, low_memory=False, y1=None, yN=None):
+    def __init__(
+        self,
+        file_path: str,
+        *,
+        low_memory: bool = False,
+        y1: int | None = None,
+        yN: int | None = None,
+    ) -> None:
+        """
+        Initialize FaostatProductionCropsLivestock instance.
 
+        Parameters
+        ----------
+        file_path : str
+            Path to the FAOSTAT CSV file.
+        low_memory : bool, optional
+            Whether to use low memory mode when reading CSV. Default is False.
+        y1 : int | None, optional
+            Minimum year to include in the data. If None, no lower bound is applied.
+        yN : int | None, optional
+            Maximum year to include in the data. If None, no upper bound is applied.
+        """
         # Import
         self.file_path = file_path
         self.data = pd.read_csv(
@@ -88,25 +160,42 @@ class FaostatProductionCropsLivestock:
         if "China" in self.data.Area.values:
             self.data = self.data.query('Area != "China"')
 
-    def get_element(self, element, *, fao_to_clm_dict=None, y1=None, yN=None):
-        """Extract an element of the FAOSTAT DataFrame, optionally restricting to certain crops/yrs.
+    def get_element(
+        self,
+        element: str,
+        *,
+        fao_to_clm_dict: dict[str, str] | None = None,
+        y1: int | None = None,
+        yN: int | None = None,
+    ) -> pd.DataFrame:
+        """
+        Extract an element of the FAOSTAT DataFrame, optionally restricting to certain crops/yrs.
 
-        Args:
-            element (str): Element to extract. E.g.: "Production", "Area harvested"
-            fao_to_clm_dict (dict, optional): If you want to extract only the rows relevant to CLM,
-                include this dictionary. The keys should be FAO crop names and the values should be
-                what you want the FAO crops renamed to. E.g.:
-                    {'Maize': 'corn', 'Rice': 'rice', 'Seed cotton, unginned': 'cotton'}
-            y1 (int, optional): Minimum year to include in extracted DataFrame.
-            yN (int, optional): Maximum year to include in extracted DataFrame.
+        Parameters
+        ----------
+        element : str
+            Element to extract. E.g.: "Production", "Area harvested"
+        fao_to_clm_dict : dict[str, str] | None, optional
+            If you want to extract only the rows relevant to CLM, include this dictionary.
+            The keys should be FAO crop names and the values should be what you want the FAO
+            crops renamed to. E.g.:
+                {'Maize': 'corn', 'Rice': 'rice', 'Seed cotton, unginned': 'cotton'}
+        y1 : int | None, optional
+            Minimum year to include in extracted DataFrame.
+        yN : int | None, optional
+            Maximum year to include in extracted DataFrame.
 
-        Raises:
-            KeyError: If element not present in FAOSTAT data.Element
+        Returns
+        -------
+        pandas.DataFrame
+            A subset of self.data with just the element of interest, restricted to the crops
+            and years of interest if relevant inputs provided. The MultiIndex will also be set
+            to something useful.
 
-        Returns:
-            Pandas DataFrame: A subset of self.df with just the element of interest, restricted to
-                the crops and years of interest if relevant inputs provided. The MultiIndex will
-                also be set to something useful.
+        Raises
+        ------
+        KeyError
+            If element not present in FAOSTAT data.Element
         """
         # pylint: disable=too-many-arguments
 
@@ -131,20 +220,28 @@ class FaostatProductionCropsLivestock:
 
         return fao_this
 
+    def get_clm_yield_prod_area_dict(
+        self, fao_to_clm_dict: dict[str, str]
+    ) -> dict[str, pd.DataFrame]:
+        """
+        Get yield, production, and area in terms of CLM crops.
 
-    def get_clm_yield_prod_area_dict(self, fao_to_clm_dict: dict) -> dict:
-        """Get yield, production, and area in terms of CLM crops
+        Parameters
+        ----------
+        fao_to_clm_dict : dict[str, str]
+            Keys should be FAO crop names and the values should be what you want the FAO crops
+            renamed to. E.g.:
+                {'Maize': 'corn', 'Rice': 'rice', 'Seed cotton, unginned': 'cotton'}
 
-        Args:
-            fao_to_clm_dict (dict): Keys should be FAO crop names and the values should be what
-                you want the FAO crops renamed to. E.g.:
-                    {'Maize': 'corn', 'Rice': 'rice', 'Seed cotton, unginned': 'cotton'}
+        Returns
+        -------
+        dict[str, pandas.DataFrame]
+            A dictionary with keys 'yield', 'prod', and 'area'. Values are Pandas DataFrames.
 
-        Raises:
-            RuntimeError: On failure to align production and area indices
-
-        Returns:
-            dict: A dictionary with keys yield, prod, and area. Values are Pandas DataFrames.
+        Raises
+        ------
+        RuntimeError
+            On failure to align production and area indices.
         """
 
         fao_prod = self.get_element("Production", fao_to_clm_dict=fao_to_clm_dict)

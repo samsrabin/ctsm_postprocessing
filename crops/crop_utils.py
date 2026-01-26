@@ -6,19 +6,33 @@ including functions for calculating harvest indices, converting units, and handl
 variables.
 """
 
+from __future__ import annotations
 
-def get_cft_ds(ds, cft):
+import xarray as xr
+
+from .cft import Cft
+
+
+def get_cft_ds(ds: xr.Dataset, cft: Cft) -> xr.Dataset:
     """
     Get a dataset for a specific crop functional type (CFT).
 
-    Parameters:
-    ds (xarray.Dataset): Dataset containing crop data.
-    cft (xarray.DataArray): DataArray containing crop functional type information.
+    This function extracts data for a specific CFT from a dataset, adds CFT coordinate information,
+    and expands dimensions appropriately.
 
-    Returns:
-    xarray.Dataset: Dataset for the specified crop functional type.
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing crop data with pft dimension.
+    cft : Cft
+        Cft object containing crop functional type information.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset for the specified crop functional type with cft dimension and coordinates.
     """
-    ds = ds.isel(pft=cft.where)
+    ds = ds.isel(pft=cft.get_where(ds))
     ds["cft"] = cft.pft_num
     ds = ds.set_coords("cft")
     for var in ds:

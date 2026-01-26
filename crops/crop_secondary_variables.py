@@ -2,20 +2,39 @@
 Functions to generate useful crop variables not saved by CTSM
 """
 
-import os
-import sys
+from __future__ import annotations
+
+from types import MappingProxyType
+
 import numpy as np
+import xarray as xr
 
-try:
-    # Attempt relative import if running as part of a package
-    from .crop_defaults import DEFAULT_VAR_DICT
-except ImportError:
-    # Fallback to absolute import if running as a script
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from crops.crop_defaults import DEFAULT_VAR_DICT
+from .crop_defaults import DEFAULT_VAR_DICT
 
 
-def _handle_huifrac_where_gddharv_notpos(da_huifrac, da_gddharv):
+def _handle_huifrac_where_gddharv_notpos(
+    da_huifrac: xr.DataArray, da_gddharv: xr.DataArray
+) -> np.ndarray:
+    """
+    Handle HUIFRAC values where GDDHARV is not positive.
+
+    Parameters
+    ----------
+    da_huifrac : xarray.DataArray
+        Heat unit index fraction values.
+    da_gddharv : xarray.DataArray
+        Growing degree days to harvest values.
+
+    Returns
+    -------
+    numpy.ndarray
+        Adjusted HUIFRAC values with special handling for zero/negative GDDHARV.
+
+    Raises
+    ------
+    NotImplementedError
+        If any GDDHARV value is negative for non-NaN HUIFRAC.
+    """
     # Error if any GDDHARV value is negative for non-NaN HUIFRAC
     if np.any((da_gddharv < 0) & ~np.isnan(da_huifrac)):
         raise NotImplementedError("How should negative GDDHARV affect HUIFRAC?")
@@ -28,9 +47,22 @@ def _handle_huifrac_where_gddharv_notpos(da_huifrac, da_gddharv):
     return huifrac
 
 
-def get_huifrac(ds, var_dict=DEFAULT_VAR_DICT):
+def get_huifrac(ds: xr.Dataset, var_dict: MappingProxyType = DEFAULT_VAR_DICT) -> xr.Dataset:
     """
-    Given a dataset, calculate HUIFRAC as hui_var/gddharv_var
+    Calculate HUIFRAC (Heat Unit Index fraction) as hui_var/gddharv_var.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing HUI and GDDHARV variables.
+    var_dict : MappingProxyType, optional
+        Dictionary mapping variable types to their names in the dataset.
+        Defaults to DEFAULT_VAR_DICT.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added HUIFRAC_PERHARV variable.
     """
     hui_var = var_dict["hui_var"]
     gddharv_var = var_dict["gddharv_var"]
@@ -56,9 +88,24 @@ def get_huifrac(ds, var_dict=DEFAULT_VAR_DICT):
     return ds
 
 
-def _calendar_has_leapdays(time_da):
+def _calendar_has_leapdays(time_da: xr.DataArray) -> bool:
     """
-    Returns True if da has has a calendar and it definitely has leap days
+    Check if a time DataArray has a calendar with leap days.
+
+    Parameters
+    ----------
+    time_da : xarray.DataArray
+        DataArray containing time dimension.
+
+    Returns
+    -------
+    bool
+        True if the calendar definitely has leap days, False otherwise.
+
+    Raises
+    ------
+    NotImplementedError
+        If the calendar type is not recognized.
     """
     # Handle trivial cases where time is missing, empty, or a plain numpy type
     if "time" not in time_da.dims:
@@ -77,9 +124,27 @@ def _calendar_has_leapdays(time_da):
     return dec_31_leapyr > 365
 
 
-def get_gslen(ds):
+def get_gslen(ds: xr.Dataset) -> xr.Dataset:
     """
-    Given a dataset, calculate growing season length as HDATES - SDATES_PERHARV
+    Calculate growing season length as HDATES - SDATES_PERHARV.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset containing HDATES and SDATES_PERHARV variables.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with added GSLEN_PERHARV variable, or unchanged if required variables
+        are not present.
+
+    Raises
+    ------
+    ValueError
+        If HDATES or SDATES_PERHARV contain unexpected values (< 1, > 366, or NaN mismatches).
+    NotImplementedError
+        If the calendar has leap days or if date values suggest leap days.
     """
     var_hdates = "HDATES"
     var_sdates = "SDATES_PERHARV"
@@ -120,7 +185,21 @@ def get_gslen(ds):
     ds["GSLEN_PERHARV"] = da_gslen
     return ds
 
-def mask_sow_harv_dates(cft_ds):
+
+def mask_sow_harv_dates(cft_ds: xr.Dataset) -> xr.Dataset:
+    """
+    Mask negative sowing and harvest dates in the dataset.
+
+    Parameters
+    ----------
+    cft_ds : xarray.Dataset
+        Dataset containing HDATES and/or SDATES_PERHARV variables.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with HDATES and SDATES_PERHARV masked where values are negative.
+    """
     for var in ["HDATES", "SDATES_PERHARV"]:
         if var not in cft_ds:
             print(f"{var} not found in Dataset")

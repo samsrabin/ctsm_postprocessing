@@ -2,19 +2,66 @@
 Module for identifying CTSM resolutions
 """
 
+from __future__ import annotations
+
 import numpy as np
+import xarray as xr
 
 
 class Resolution:
     """
-    Class for defining a CTSM resolution
+    Class for defining a CTSM resolution.
+
+    Attributes
+    ----------
+    name : str
+        Name of the resolution (e.g., 'f09', 'f19', '4x5').
+    lon_min : float
+        Minimum longitude value.
+    lon_max : float
+        Maximum longitude value.
+    lon_n : int
+        Number of longitude grid points.
+    lat_min : float
+        Minimum latitude value.
+    lat_max : float
+        Maximum latitude value.
+    lat_n : int
+        Number of latitude grid points.
     """
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, name, *, lon_min, lon_max, lon_n, lat_min, lat_max, lat_n):
+    def __init__(
+        self,
+        name: str,
+        *,
+        lon_min: float,
+        lon_max: float,
+        lon_n: int,
+        lat_min: float,
+        lat_max: float,
+        lat_n: int,
+    ) -> None:
         """
-        Initialize an instance of the Resolution class
+        Initialize an instance of the Resolution class.
+
+        Parameters
+        ----------
+        name : str
+            Name of the resolution (e.g., 'f09', 'f19', '4x5').
+        lon_min : float
+            Minimum longitude value.
+        lon_max : float
+            Maximum longitude value.
+        lon_n : int
+            Number of longitude grid points.
+        lat_min : float
+            Minimum latitude value.
+        lat_max : float
+            Maximum latitude value.
+        lat_n : int
+            Number of latitude grid points.
         """
         self.name = name
         self.lon_min = lon_min
@@ -24,9 +71,19 @@ class Resolution:
         self.lat_max = lat_max
         self.lat_n = lat_n
 
-    def is_ds_this_res(self, ds):  # pylint: disable=invalid-name
+    def is_ds_this_res(self, ds: xr.Dataset) -> bool:  # pylint: disable=invalid-name
         """
-        Check whether an xarray Dataset matches the conditions defined for this Resolution
+        Check whether an xarray Dataset matches the conditions defined for this Resolution.
+
+        Parameters
+        ----------
+        ds : xarray.Dataset
+            Dataset to check, must contain 'lon' and 'lat' coordinates.
+
+        Returns
+        -------
+        bool
+            True if the dataset matches this resolution's specifications, False otherwise.
         """
         ds_lon = ds["lon"]
         ds_lat = ds["lat"]
@@ -90,9 +147,27 @@ RESOLUTION_LIST = [
 ]
 
 
-def identify_resolution(ds):  # pylint: disable=invalid-name
+def identify_resolution(ds: xr.Dataset) -> Resolution:  # pylint: disable=invalid-name
     """
-    Identify the resolution of an xarray Dataset
+    Identify the resolution of an xarray Dataset.
+
+    Compares the dataset's longitude and latitude dimensions against known CTSM resolutions
+    defined in RESOLUTION_LIST.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Dataset to identify, must contain 'lon' and 'lat' coordinates.
+
+    Returns
+    -------
+    Resolution
+        The Resolution object matching the dataset's grid specifications.
+
+    Raises
+    ------
+    KeyError
+        If the dataset's resolution doesn't match any known resolution in RESOLUTION_LIST.
     """
     for res in RESOLUTION_LIST:
         if res.is_ds_this_res(ds):

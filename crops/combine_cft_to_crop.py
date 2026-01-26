@@ -6,19 +6,30 @@ data in CTSM (Community Terrestrial Systems Model) output. It handles the mappin
 between CFTs and crops and provides methods for aggregating CFT-level variables.
 """
 
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import numpy as np
 import xarray as xr
 
+# To avoid circular dependencies; we only need this import for type-checking purposes.
+if TYPE_CHECKING:
+    from .cropcase import CropCase
 
-def get_cft_crop_da(crops_to_include, case, case_ds):
+
+def get_cft_crop_da(
+    crops_to_include: list[str], case: CropCase, case_ds: xr.Dataset
+) -> xr.DataArray:
     """
     Create a CFT-dimensioned DataArray mapping CFT indices to crop names.
 
     Parameters
     ----------
-    crops_to_include : list
+    crops_to_include : list[str]
         List of crop names to process
-    case : object
+    case : CropCase
         Case object containing crop definitions and PFT mappings
     case_ds : xarray.Dataset
         Dataset containing CFT dimension information
@@ -47,18 +58,18 @@ def get_cft_crop_da(crops_to_include, case, case_ds):
 
 
 def _one_crop(
-    case,
-    case_ds,
-    crop,
-    var,
-    crop_cft_da_io,
-):
+    case: CropCase,
+    case_ds: xr.Dataset,
+    crop: str,
+    var: str,
+    crop_cft_da_io: xr.DataArray | None,
+) -> xr.DataArray:
     """
     Process data for a single crop type.
 
     Parameters
     ----------
-    case : object
+    case : CropCase
         Case object containing crop definitions
     case_ds : xarray.Dataset
         Dataset containing CFT-dimensioned data
@@ -93,15 +104,17 @@ def _one_crop(
     return crop_cft_da_io
 
 
-def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
+def get_all_cft_crop_das(
+    crops_to_include: list[str], case: CropCase, case_ds: xr.Dataset, var: str
+) -> xr.DataArray:
     """
     Process CFT data for all specified crops.
 
     Parameters
     ----------
-    crops_to_include : list
+    crops_to_include : list[str]
         List of crop names to process
-    case : object
+    case : CropCase
         Case object containing crop definitions
     case_ds : xarray.Dataset
         Dataset containing CFT-dimensioned data
@@ -127,7 +140,14 @@ def get_all_cft_crop_das(crops_to_include, case, case_ds, var):
     return crop_cft_da
 
 
-def combine_cft_to_crop(ds, var_in, var_out, method, weights=None, **kwargs):
+def combine_cft_to_crop(
+    ds: xr.Dataset,
+    var_in: str,
+    var_out: str,
+    method: Callable | str,
+    weights: str | xr.DataArray | None = None,
+    **kwargs,
+) -> xr.Dataset:
     """
     Combine CFT-level data into crop-level data using the specified method.
 
@@ -139,12 +159,12 @@ def combine_cft_to_crop(ds, var_in, var_out, method, weights=None, **kwargs):
         Name of the input variable to process
     var_out : str
         Name of the output variable to create
-    method : callable or str
+    method : Callable | str
         Method to use for combining CFT data. Can be:
         - A callable function
         - Name of an xarray groupby method (e.g., 'mean', 'sum', 'std')
         - Name of a numpy method
-    weights : str or xarray.DataArray, optional
+    weights : str | xarray.DataArray | None, optional
         Weights to use for weighted mean operations. Can be:
         - Name of a variable in the dataset to use as weights
         - An xarray.DataArray with 'cft' dimension matching the input data
